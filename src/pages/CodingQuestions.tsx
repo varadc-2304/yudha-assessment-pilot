@@ -3,8 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Clock, Code, Edit, Trash2 } from "lucide-react";
+import { Code, Plus, Edit, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,38 +14,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { CodingQuestion } from "@/types/assessment";
+import CreateCodingForm from "@/components/coding/CreateCodingForm";
 
 type DatabaseCodingQuestion = {
   id: string;
   title: string;
   description: string;
   assessment_id: string;
-  image_url: string | null;
   marks: number;
   order_index: number;
+  image_url: string | null;
   created_at: string;
-  language?: string;
-  examples?: Array<{
+  coding_languages: Array<{
+    id: string;
+    coding_lang: string;
+    solution_template: string;
+  }>;
+  coding_examples: Array<{
     id: string;
     input: string;
     output: string;
-    explanation?: string;
+    explanation: string;
     order_index: number;
   }>;
-  test_cases?: Array<{
+  test_cases: Array<{
     id: string;
     input: string;
     output: string;
     marks: number;
     is_hidden: boolean;
     order_index: number;
-  }>;
-  coding_languages?: Array<{
-    id: string;
-    coding_lang: string;
-    solution_template: string;
-    constraints?: string[];
   }>;
 };
 
@@ -56,8 +55,9 @@ const CodingQuestions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedQuestion, setSelectedQuestion] = useState<CodingQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // Fetch coding questions with their details
+  // Fetch coding questions with their related data
   const { data: questions, isLoading, error } = useQuery({
     queryKey: ['coding-questions'],
     queryFn: async () => {
@@ -68,9 +68,17 @@ const CodingQuestions: React.FC = () => {
       
       if (questionsError) throw questionsError;
 
-      // For each question, fetch examples, test cases, and languages
-      const questionsWithDetails = await Promise.all(
+      // For each question, fetch its related data
+      const questionsWithRelatedData = await Promise.all(
         codingQuestions.map(async (question) => {
+          // Fetch coding languages
+          const { data: languages, error: langsError } = await supabase
+            .from('coding_languages')
+            .select('*')
+            .eq('coding_question_id', question.id);
+          
+          if (langsError) throw langsError;
+          
           // Fetch examples
           const { data: examples, error: examplesError } = await supabase
             .from('coding_examples')
@@ -79,7 +87,7 @@ const CodingQuestions: React.FC = () => {
             .order('order_index', { ascending: true });
           
           if (examplesError) throw examplesError;
-          
+
           // Fetch test cases
           const { data: testCases, error: testCasesError } = await supabase
             .from('test_cases')
@@ -89,28 +97,11 @@ const CodingQuestions: React.FC = () => {
           
           if (testCasesError) throw testCasesError;
           
-          // Fetch coding languages
-          const { data: codingLanguages, error: languagesError } = await supabase
-            .from('coding_languages')
-            .select('*')
-            .eq('coding_question_id', question.id);
-          
-          if (languagesError) throw languagesError;
-          
-          const primaryLanguage = codingLanguages && codingLanguages.length > 0
-            ? codingLanguages[0].coding_lang
-            : 'javascript';
-          
-          // Calculate total marks from test cases
-          const totalMarks = testCases?.reduce((sum, tc) => sum + tc.marks, 0) || question.marks;
-          
           return {
             ...question,
-            examples,
-            test_cases: testCases,
-            coding_languages: codingLanguages,
-            language: primaryLanguage,
-            marks: totalMarks
+            coding_languages: languages || [],
+            coding_examples: examples || [],
+            test_cases: testCases || []
           };
         })
       );
@@ -127,45 +118,52 @@ const CodingQuestions: React.FC = () => {
         assessments.forEach(a => assessmentMap.set(a.id, { name: a.name, code: a.code }));
       }
 
+      // Calculate total marks
+      const calculateTotalMarks = (testCases: any[]) => {
+        return testCases.reduce((sum, testCase) => sum + testCase.marks, 0);
+      };
+
       // Map database questions to the format expected by the UI
-      return questionsWithDetails.map((q: DatabaseCodingQuestion) => ({
-        id: q.id,
-        type: "coding" as const,
-        question: q.title,
-        description: q.description,
-        marks: q.marks,
-        language: q.language as any || "javascript",
-        assessment: assessmentMap.get(q.assessment_id) || { name: 'Unknown', code: '' },
-        assessmentId: q.assessment_id,
-        imageUrl: q.image_url,
-        orderIndex: q.order_index,
-        sampleInput: q.examples && q.examples.length > 0 ? q.examples[0].input : undefined,
-        sampleOutput: q.examples && q.examples.length > 0 ? q.examples[0].output : undefined,
-        examples: q.examples?.map(e => ({
-          id: e.id,
-          input: e.input,
-          output: e.output,
-          explanation: e.explanation,
-          orderIndex: e.order_index
-        })),
-        testCases: q.test_cases?.map(tc => ({
-          id: tc.id,
-          input: tc.input,
-          output: tc.output,
-          marks: tc.marks,
-          isHidden: tc.is_hidden,
-          orderIndex: tc.order_index
-        })),
-        timeLimit: 600, // Default time limit in seconds (10 minutes)
-        languages: q.coding_languages?.map(l => l.coding_lang) || []
-      }));
+      return questionsWithRelatedData.map((q: DatabaseCodingQuestion) => {
+        const totalMarks = calculateTotalMarks(q.test_cases);
+        const language = q.coding_languages && q.coding_languages.length > 0 
+          ? q.coding_languages[0].coding_lang 
+          : 'python';
+          
+        return {
+          id: q.id,
+          type: "coding" as const,
+          question: q.title,
+          description: q.description,
+          marks: totalMarks,
+          language: language as any,
+          assessment: assessmentMap.get(q.assessment_id) || { name: 'Unknown', code: '' },
+          assessmentId: q.assessment_id,
+          imageUrl: q.image_url,
+          examples: q.coding_examples.map(e => ({
+            id: e.id,
+            input: e.input,
+            output: e.output,
+            explanation: e.explanation,
+            orderIndex: e.order_index
+          })),
+          testCases: q.test_cases.map(t => ({
+            id: t.id,
+            input: t.input,
+            output: t.output,
+            marks: t.marks,
+            isHidden: t.is_hidden,
+            orderIndex: t.order_index
+          }))
+        };
+      });
     }
   });
 
   // Delete coding question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Delete the coding question (cascade will delete examples, test cases, etc.)
+      // Delete the coding question (cascade will delete related data)
       const { error } = await supabase
         .from('coding_questions')
         .delete()
@@ -205,20 +203,6 @@ const CodingQuestions: React.FC = () => {
     question.description?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const languageColors: Record<string, string> = {
-    javascript: "bg-yellow-100 text-yellow-800",
-    python: "bg-blue-100 text-blue-800",
-    java: "bg-red-100 text-red-800",
-    cpp: "bg-purple-100 text-purple-800",
-  };
-
-  const formatTime = (seconds: number | undefined) => {
-    if (!seconds) return "No limit";
-    const minutes = Math.floor(seconds / 60);
-    const remainingSecs = seconds % 60;
-    return `${minutes}:${remainingSecs.toString().padStart(2, '0')}`;
-  };
-
   if (error) {
     return (
       <div className="p-8 text-center">
@@ -230,11 +214,16 @@ const CodingQuestions: React.FC = () => {
     );
   }
 
+  // If create form is shown, render the form component
+  if (showCreateForm) {
+    return <CreateCodingForm />;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Coding Questions</h1>
-        <Button className="bg-yudha-600 hover:bg-yudha-700">
+        <Button className="bg-yudha-600 hover:bg-yudha-700" onClick={() => setShowCreateForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Coding Question
         </Button>
@@ -247,7 +236,7 @@ const CodingQuestions: React.FC = () => {
         <CardContent>
           <div className="relative">
             <Input
-              placeholder="Search coding questions..."
+              placeholder="Search questions..."
               value={searchTerm}
               onChange={handleSearch}
               className="w-full"
@@ -278,74 +267,89 @@ const CodingQuestions: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    <span className="bg-yudha-100 text-yudha-800 text-xs px-2 py-1 rounded">
-                      {question.marks} marks
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        {question.language}
+                      </Badge>
+                      <span className="bg-yudha-100 text-yudha-800 text-xs px-2 py-1 rounded">
+                        {question.marks} marks
+                      </span>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {question.description && (
-                    <p className="text-gray-700 mb-4">{question.description}</p>
+                    <p className="text-gray-700 mb-4 whitespace-pre-wrap">{question.description}</p>
                   )}
-                  {question.imageUrl && (
-                    <div className="mb-4">
-                      <img 
-                        src={question.imageUrl} 
-                        alt={question.question}
-                        className="max-w-md rounded-md shadow-sm border" 
-                      />
+                  
+                  {/* Examples */}
+                  {question.examples && question.examples.length > 0 && (
+                    <div className="mb-4 space-y-3">
+                      <h3 className="font-medium text-gray-900">Examples:</h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {question.examples.map((example, index) => (
+                          <div key={example.id} className="border rounded-md p-3">
+                            <div className="font-medium mb-2">Example {index + 1}</div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-700">Input:</div>
+                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 mb-2 overflow-auto max-h-20">
+                                {example.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-700">Output:</div>
+                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 mb-2 overflow-auto max-h-20">
+                                {example.output}
+                              </pre>
+                            </div>
+                            {example.explanation && (
+                              <div>
+                                <div className="text-sm font-medium text-gray-700">Explanation:</div>
+                                <p className="text-sm mt-1">{example.explanation}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    {question.languages && question.languages.map(lang => (
-                      <Badge 
-                        key={lang}
-                        className={`${languageColors[lang] || "bg-gray-100 text-gray-800"}`}
-                      >
-                        <Code className="h-3 w-3 mr-1" />
-                        {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                      </Badge>
-                    ))}
-                    {question.timeLimit && (
-                      <Badge variant="outline" className="flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {formatTime(question.timeLimit)}
-                      </Badge>
-                    )}
-                    {question.testCases && (
-                      <Badge variant="outline">
-                        {question.testCases.filter(tc => !tc.isHidden).length} visible / {question.testCases.filter(tc => tc.isHidden).length} hidden tests
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Display examples */}
-                  {question.examples && question.examples.length > 0 && (
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1">Sample Input:</h4>
-                        <div className="bg-gray-50 p-3 rounded border font-mono text-sm overflow-x-auto">
-                          {question.examples[0].input}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-semibold mb-1">Sample Output:</h4>
-                        <div className="bg-gray-50 p-3 rounded border font-mono text-sm overflow-x-auto">
-                          {question.examples[0].output}
-                        </div>
-                      </div>
-                      {question.examples[0].explanation && (
-                        <div className="md:col-span-2">
-                          <h4 className="text-sm font-semibold mb-1">Explanation:</h4>
-                          <div className="bg-gray-50 p-3 rounded border text-sm">
-                            {question.examples[0].explanation}
+                  {/* Test Cases */}
+                  {question.testCases && question.testCases.length > 0 && (
+                    <div className="mb-4 space-y-3">
+                      <h3 className="font-medium text-gray-900">Test Cases:</h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {question.testCases.filter(tc => !tc.isHidden).map((testCase, index) => (
+                          <div key={testCase.id} className="border rounded-md p-3">
+                            <div className="flex justify-between mb-2">
+                              <span className="font-medium">Test Case {index + 1}</span>
+                              <Badge>{testCase.marks} {testCase.marks === 1 ? 'mark' : 'marks'}</Badge>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-700">Input:</div>
+                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 mb-2 overflow-auto max-h-20">
+                                {testCase.input}
+                              </pre>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-700">Expected Output:</div>
+                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto max-h-20">
+                                {testCase.output}
+                              </pre>
+                            </div>
                           </div>
+                        ))}
+                      </div>
+                      
+                      {/* Hidden Test Cases Count */}
+                      {question.testCases.some(tc => tc.isHidden) && (
+                        <div className="text-sm text-gray-600">
+                          + {question.testCases.filter(tc => tc.isHidden).length} hidden test {question.testCases.filter(tc => tc.isHidden).length === 1 ? 'case' : 'cases'}
                         </div>
                       )}
                     </div>
                   )}
-
+                  
                   <div className="flex justify-end gap-2 mt-4">
                     <Button variant="outline" size="sm">
                       <Edit className="h-4 w-4 mr-2" />

@@ -13,6 +13,8 @@ import CodingQuestions from "./pages/CodingQuestions";
 import Results from "./pages/Results";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CreateMCQForm from "./components/mcq/CreateMCQForm";
+import CreateCodingForm from "./components/coding/CreateCodingForm";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,7 +39,9 @@ const App = () => (
           <Route path="/assessments/:id" element={<DashboardLayout><Assessments /></DashboardLayout>} />
           <Route path="/assessments/:id/edit" element={<DashboardLayout><Assessments /></DashboardLayout>} />
           <Route path="/mcq-questions" element={<DashboardLayout><MCQQuestions /></DashboardLayout>} />
+          <Route path="/create-mcq-question" element={<DashboardLayout><CreateMCQForm /></DashboardLayout>} />
           <Route path="/coding-questions" element={<DashboardLayout><CodingQuestions /></DashboardLayout>} />
+          <Route path="/create-coding-question" element={<DashboardLayout><CreateCodingForm /></DashboardLayout>} />
           <Route path="/results" element={<DashboardLayout><Results /></DashboardLayout>} />
           <Route path="/results/:assessmentId" element={<DashboardLayout><Results /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />

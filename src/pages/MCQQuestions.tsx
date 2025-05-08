@@ -15,6 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MCQQuestion } from "@/types/assessment";
+import CreateMCQForm from "@/components/mcq/CreateMCQForm";
+import { useNavigate } from "react-router-dom";
 
 type DatabaseMCQQuestion = {
   id: string;
@@ -35,10 +37,12 @@ type DatabaseMCQQuestion = {
 
 const MCQQuestions: React.FC = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Fetch MCQ questions with their options
   const { data: questions, isLoading, error } = useQuery({
@@ -154,11 +158,16 @@ const MCQQuestions: React.FC = () => {
     );
   }
 
+  // If create form is shown, render the form component
+  if (showCreateForm) {
+    return <CreateMCQForm />;
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">MCQ Questions</h1>
-        <Button className="bg-yudha-600 hover:bg-yudha-700">
+        <Button className="bg-yudha-600 hover:bg-yudha-700" onClick={() => setShowCreateForm(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add MCQ Question
         </Button>
