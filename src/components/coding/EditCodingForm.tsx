@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -15,6 +15,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { CodingQuestion, CodingLanguage } from '@/types/assessment';
 
 const codingFormSchema = z.object({
   title: z.string().min(3, { message: 'Question title must be at least 3 characters long' }),
@@ -48,7 +49,12 @@ interface TestCase {
   order_index: number;
 }
 
-const CreateCodingForm = () => {
+interface EditCodingFormProps {
+  questionId: string;
+  onCancel: () => void;
+}
+
+const EditCodingForm: React.FC<EditCodingFormProps> = ({ questionId, onCancel }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [languageOptions, setLanguageOptions] = useState<LanguageOption[]>([
@@ -61,7 +67,6 @@ const CreateCodingForm = () => {
     explanation: '',
     order_index: 0
   }]);
-
   const [testCases, setTestCases] = useState<TestCase[]>([{
     id: crypto.randomUUID(),
     input: '',
@@ -70,13 +75,14 @@ const CreateCodingForm = () => {
     is_hidden: false,
     order_index: 0
   }]);
+  const [loading, setLoading] = useState(true);
 
   const form = useForm<CodingFormValues>({
     resolver: zodResolver(codingFormSchema),
     defaultValues: {
       title: '',
       description: '',
-      order_index: 0,
+      order_index: 0
     }
   });
 
@@ -94,84 +100,294 @@ const CreateCodingForm = () => {
     }
   });
 
-  const createCodingMutation = useMutation({
+  // Fetch the coding question data
+  useEffect(() => {
+    const fetchQuestion = async () => {
+      try {
+        // Fetch question data
+        const { data: questionData, error: questionError } = await supabase
+          .from('coding_questions')
+          .select('*')
+          .eq('id', questionId)
+          .single();
+        
+        if (questionError) throw questionError;
+
+        // Fetch languages
+        const { data: languagesData, error: languagesError } = await supabase
+          .from('coding_languages')
+          .select('*')
+          .eq('coding_question_id', questionId);
+        
+        if (languagesError) throw languagesError;
+
+        // Fetch examples
+        const { data: examplesData, error: examplesError } = await supabase
+          .from('coding_examples')
+          .select('*')
+          .eq('coding_question_id', questionId)
+          .order('order_index', { ascending: true });
+        
+        if (examplesError) throw examplesError;
+
+        // Fetch test cases
+        const { data: testCasesData, error: testCasesError } = await supabase
+          .from('test_cases')
+          .select('*')
+          .eq('coding_question_id', questionId)
+          .order('order_index', { ascending: true });
+        
+        if (testCasesError) throw testCasesError;
+
+        // Set form values
+        form.setValue('title', questionData.title);
+        form.setValue('description', questionData.description || '');
+        form.setValue('assessment_id', questionData.assessment_id);
+        form.setValue('order_index', questionData.order_index);
+
+        // Set language options
+        if (languagesData.length > 0) {
+          setLanguageOptions(languagesData.map(lang => ({
+            id: lang.id,
+            languageType: lang.coding_lang as any,
+            solutionTemplate: lang.solution_template
+          })));
+        }
+
+        // Set examples
+        if (examplesData.length > 0) {
+          setExamples(examplesData.map(example => ({
+            id: example.id,
+            input: example.input,
+            output: example.output,
+            explanation: example.explanation || '',
+            order_index: example.order_index
+          })));
+        }
+
+        // Set test cases
+        if (testCasesData.length > 0) {
+          setTestCases(testCasesData.map(testCase => ({
+            id: testCase.id,
+            input: testCase.input,
+            output: testCase.output,
+            marks: testCase.marks,
+            is_hidden: testCase.is_hidden,
+            order_index: testCase.order_index
+          })));
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching question:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load question data",
+          variant: "destructive"
+        });
+        onCancel();
+      }
+    };
+
+    fetchQuestion();
+  }, [questionId, form, toast, onCancel]);
+
+  const updateCodingMutation = useMutation({
     mutationFn: async (data: CodingFormValues & { 
-      languageOptions: LanguageOption[],
+      languageOptions: LanguageOption[], 
       examples: Example[], 
       testCases: TestCase[] 
     }) => {
-      // First insert the coding question
-      const { data: codingQuestion, error: questionError } = await supabase
+      // Update the coding question
+      const { error: questionError } = await supabase
         .from('coding_questions')
-        .insert({
+        .update({
           title: data.title,
           description: data.description || '',
           assessment_id: data.assessment_id,
           order_index: data.order_index,
         })
-        .select()
-        .single();
+        .eq('id', questionId);
       
       if (questionError) throw questionError;
 
-      // Insert the programming languages and solution templates
-      const langPromises = data.languageOptions.map(lang => {
-        return supabase
+      // Handle language options
+      const { data: existingLangs, error: fetchLangsError } = await supabase
+        .from('coding_languages')
+        .select('id')
+        .eq('coding_question_id', questionId);
+      
+      if (fetchLangsError) throw fetchLangsError;
+      
+      const existingLangIds = new Set(existingLangs.map(l => l.id));
+      const currentLangIds = new Set(data.languageOptions.map(l => l.id));
+      
+      // Languages to delete
+      const toDeleteLangs = existingLangs.filter(l => !currentLangIds.has(l.id)).map(l => l.id);
+      
+      // Delete removed languages
+      if (toDeleteLangs.length > 0) {
+        const { error: deleteLangsError } = await supabase
           .from('coding_languages')
-          .insert({
-            coding_question_id: codingQuestion.id,
-            coding_lang: lang.languageType,
-            solution_template: lang.solutionTemplate
-          });
-      });
+          .delete()
+          .in('id', toDeleteLangs);
+        
+        if (deleteLangsError) throw deleteLangsError;
+      }
       
-      await Promise.all(langPromises);
+      // Update or insert languages
+      for (const lang of data.languageOptions) {
+        if (existingLangIds.has(lang.id)) {
+          // Update existing
+          const { error: updateLangError } = await supabase
+            .from('coding_languages')
+            .update({
+              coding_lang: lang.languageType,
+              solution_template: lang.solutionTemplate
+            })
+            .eq('id', lang.id);
+          
+          if (updateLangError) throw updateLangError;
+        } else {
+          // Insert new
+          const { error: insertLangError } = await supabase
+            .from('coding_languages')
+            .insert({
+              coding_question_id: questionId,
+              coding_lang: lang.languageType,
+              solution_template: lang.solutionTemplate
+            });
+          
+          if (insertLangError) throw insertLangError;
+        }
+      }
+
+      // Handle examples
+      const { data: existingExamples, error: fetchExamplesError } = await supabase
+        .from('coding_examples')
+        .select('id')
+        .eq('coding_question_id', questionId);
       
-      // Insert examples
-      const examplePromises = data.examples.map((example, index) => {
-        return supabase
+      if (fetchExamplesError) throw fetchExamplesError;
+      
+      const existingExampleIds = new Set(existingExamples.map(e => e.id));
+      const currentExampleIds = new Set(data.examples.map(e => e.id));
+      
+      // Examples to delete
+      const toDeleteExamples = existingExamples.filter(e => !currentExampleIds.has(e.id)).map(e => e.id);
+      
+      // Delete removed examples
+      if (toDeleteExamples.length > 0) {
+        const { error: deleteExamplesError } = await supabase
           .from('coding_examples')
-          .insert({
-            coding_question_id: codingQuestion.id,
-            input: example.input,
-            output: example.output,
-            explanation: example.explanation || null,
-            order_index: index
-          });
-      });
+          .delete()
+          .in('id', toDeleteExamples);
+        
+        if (deleteExamplesError) throw deleteExamplesError;
+      }
       
-      await Promise.all(examplePromises);
+      // Update or insert examples
+      for (const [index, example] of data.examples.entries()) {
+        if (existingExampleIds.has(example.id)) {
+          // Update existing
+          const { error: updateExampleError } = await supabase
+            .from('coding_examples')
+            .update({
+              input: example.input,
+              output: example.output,
+              explanation: example.explanation || null,
+              order_index: index
+            })
+            .eq('id', example.id);
+          
+          if (updateExampleError) throw updateExampleError;
+        } else {
+          // Insert new
+          const { error: insertExampleError } = await supabase
+            .from('coding_examples')
+            .insert({
+              coding_question_id: questionId,
+              input: example.input,
+              output: example.output,
+              explanation: example.explanation || null,
+              order_index: index
+            });
+          
+          if (insertExampleError) throw insertExampleError;
+        }
+      }
+
+      // Handle test cases
+      const { data: existingTestCases, error: fetchTestCasesError } = await supabase
+        .from('test_cases')
+        .select('id')
+        .eq('coding_question_id', questionId);
       
-      // Insert test cases
-      const testCasePromises = data.testCases.map((testCase, index) => {
-        return supabase
+      if (fetchTestCasesError) throw fetchTestCasesError;
+      
+      const existingTestCaseIds = new Set(existingTestCases.map(t => t.id));
+      const currentTestCaseIds = new Set(data.testCases.map(t => t.id));
+      
+      // Test cases to delete
+      const toDeleteTestCases = existingTestCases.filter(t => !currentTestCaseIds.has(t.id)).map(t => t.id);
+      
+      // Delete removed test cases
+      if (toDeleteTestCases.length > 0) {
+        const { error: deleteTestCasesError } = await supabase
           .from('test_cases')
-          .insert({
-            coding_question_id: codingQuestion.id,
-            input: testCase.input,
-            output: testCase.output,
-            marks: testCase.marks,
-            is_hidden: testCase.is_hidden,
-            order_index: index
-          });
-      });
+          .delete()
+          .in('id', toDeleteTestCases);
+        
+        if (deleteTestCasesError) throw deleteTestCasesError;
+      }
       
-      await Promise.all(testCasePromises);
+      // Update or insert test cases
+      for (const [index, testCase] of data.testCases.entries()) {
+        if (existingTestCaseIds.has(testCase.id)) {
+          // Update existing
+          const { error: updateTestCaseError } = await supabase
+            .from('test_cases')
+            .update({
+              input: testCase.input,
+              output: testCase.output,
+              marks: testCase.marks,
+              is_hidden: testCase.is_hidden,
+              order_index: index
+            })
+            .eq('id', testCase.id);
+          
+          if (updateTestCaseError) throw updateTestCaseError;
+        } else {
+          // Insert new
+          const { error: insertTestCaseError } = await supabase
+            .from('test_cases')
+            .insert({
+              coding_question_id: questionId,
+              input: testCase.input,
+              output: testCase.output,
+              marks: testCase.marks,
+              is_hidden: testCase.is_hidden,
+              order_index: index
+            });
+          
+          if (insertTestCaseError) throw insertTestCaseError;
+        }
+      }
       
-      return codingQuestion;
+      return true;
     },
     onSuccess: () => {
       toast({
-        title: "Coding Question Created",
-        description: "The coding question has been successfully created."
+        title: "Coding Question Updated",
+        description: "The coding question has been successfully updated."
       });
-      navigate("/coding-questions");
+      onCancel();
     },
     onError: (error: any) => {
-      console.error("Error creating coding question:", error);
+      console.error("Error updating coding question:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to create coding question",
+        description: error.message || "Failed to update coding question",
         variant: "destructive"
       });
     }
@@ -183,16 +399,6 @@ const CreateCodingForm = () => {
       toast({
         title: "Validation Error",
         description: "At least one programming language must be specified",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check if solution templates are provided
-    if (languageOptions.some(lang => !lang.solutionTemplate.trim())) {
-      toast({
-        title: "Validation Error",
-        description: "All programming languages must have a solution template",
         variant: "destructive"
       });
       return;
@@ -219,7 +425,7 @@ const CreateCodingForm = () => {
     }
 
     // Submit data
-    createCodingMutation.mutate({ 
+    updateCodingMutation.mutate({ 
       ...values, 
       languageOptions,
       examples: examples.map((ex, i) => ({ ...ex, order_index: i })),
@@ -328,10 +534,22 @@ const CreateCodingForm = () => {
     ));
   };
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex justify-center items-center h-48">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Create Coding Question</CardTitle>
+        <CardTitle>Edit Coding Question</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -344,7 +562,7 @@ const CreateCodingForm = () => {
                   <FormLabel>Assessment</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                     disabled={isLoadingAssessments}
                   >
                     <FormControl>
@@ -612,15 +830,15 @@ const CreateCodingForm = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => navigate("/coding-questions")}
+                onClick={onCancel}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={createCodingMutation.isPending}
+                disabled={updateCodingMutation.isPending}
               >
-                {createCodingMutation.isPending ? "Creating..." : "Create Question"}
+                {updateCodingMutation.isPending ? "Updating..." : "Update Question"}
               </Button>
             </div>
           </form>
@@ -630,4 +848,4 @@ const CreateCodingForm = () => {
   );
 };
 
-export default CreateCodingForm;
+export default EditCodingForm;

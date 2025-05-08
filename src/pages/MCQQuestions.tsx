@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { MCQQuestion } from "@/types/assessment";
 import CreateMCQForm from "@/components/mcq/CreateMCQForm";
+import EditMCQForm from "@/components/mcq/EditMCQForm";
 import { useNavigate } from "react-router-dom";
 
 type DatabaseMCQQuestion = {
@@ -43,6 +44,7 @@ const MCQQuestions: React.FC = () => {
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   // Fetch MCQ questions with their options
   const { data: questions, isLoading, error } = useQuery({
@@ -142,6 +144,11 @@ const MCQQuestions: React.FC = () => {
     deleteQuestionMutation.mutate(id);
   };
 
+  const handleEdit = (question: MCQQuestion) => {
+    setSelectedQuestion(question);
+    setShowEditForm(true);
+  };
+
   const filteredQuestions = questions?.filter((question) =>
     question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -161,6 +168,19 @@ const MCQQuestions: React.FC = () => {
   // If create form is shown, render the form component
   if (showCreateForm) {
     return <CreateMCQForm />;
+  }
+
+  // If edit form is shown, render the edit form component
+  if (showEditForm && selectedQuestion) {
+    return (
+      <EditMCQForm 
+        questionId={selectedQuestion.id} 
+        onCancel={() => {
+          setShowEditForm(false);
+          setSelectedQuestion(null);
+        }} 
+      />
+    );
   }
 
   return (
@@ -246,7 +266,11 @@ const MCQQuestions: React.FC = () => {
                     ))}
                   </div>
                   <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEdit(question)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>

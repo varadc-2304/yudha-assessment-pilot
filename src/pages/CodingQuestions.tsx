@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CodingQuestion } from "@/types/assessment";
 import CreateCodingForm from "@/components/coding/CreateCodingForm";
+import EditCodingForm from "@/components/coding/EditCodingForm";
 
 type DatabaseCodingQuestion = {
   id: string;
@@ -56,6 +57,7 @@ const CodingQuestions: React.FC = () => {
   const [selectedQuestion, setSelectedQuestion] = useState<CodingQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   // Fetch coding questions with their related data
   const { data: questions, isLoading, error } = useQuery({
@@ -126,9 +128,8 @@ const CodingQuestions: React.FC = () => {
       // Map database questions to the format expected by the UI
       return questionsWithRelatedData.map((q: DatabaseCodingQuestion) => {
         const totalMarks = calculateTotalMarks(q.test_cases);
-        const language = q.coding_languages && q.coding_languages.length > 0 
-          ? q.coding_languages[0].coding_lang 
-          : 'python';
+        const languages = q.coding_languages.map(lang => lang.coding_lang);
+        const primaryLanguage = languages.length > 0 ? languages[0] : 'python';
           
         return {
           id: q.id,
@@ -136,7 +137,8 @@ const CodingQuestions: React.FC = () => {
           question: q.title,
           description: q.description,
           marks: totalMarks,
-          language: language as any,
+          language: primaryLanguage as any,
+          supportedLanguages: languages,
           assessment: assessmentMap.get(q.assessment_id) || { name: 'Unknown', code: '' },
           assessmentId: q.assessment_id,
           imageUrl: q.image_url,
@@ -198,6 +200,11 @@ const CodingQuestions: React.FC = () => {
     deleteQuestionMutation.mutate(id);
   };
 
+  const handleEdit = (question: CodingQuestion) => {
+    setSelectedQuestion(question);
+    setShowEditForm(true);
+  };
+
   const filteredQuestions = questions?.filter((question) =>
     question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -217,6 +224,19 @@ const CodingQuestions: React.FC = () => {
   // If create form is shown, render the form component
   if (showCreateForm) {
     return <CreateCodingForm />;
+  }
+
+  // If edit form is shown, render the edit form component
+  if (showEditForm && selectedQuestion) {
+    return (
+      <EditCodingForm 
+        questionId={selectedQuestion.id} 
+        onCancel={() => {
+          setShowEditForm(false);
+          setSelectedQuestion(null);
+        }} 
+      />
+    );
   }
 
   return (
@@ -268,9 +288,13 @@ const CodingQuestions: React.FC = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                        {question.language}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2">
+                        {question.supportedLanguages && question.supportedLanguages.map((lang) => (
+                          <Badge key={lang} variant="outline" className="bg-blue-100 text-blue-800">
+                            {lang}
+                          </Badge>
+                        ))}
+                      </div>
                       <span className="bg-yudha-100 text-yudha-800 text-xs px-2 py-1 rounded">
                         {question.marks} marks
                       </span>
@@ -351,7 +375,11 @@ const CodingQuestions: React.FC = () => {
                   )}
                   
                   <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleEdit(question)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
