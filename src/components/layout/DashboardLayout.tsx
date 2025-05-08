@@ -27,17 +27,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       
       <div
-        className={`transition-all duration-300 ${
+        className={`transition-all duration-300 ease-in-out ${
           sidebarOpen ? (isMobile ? "ml-0" : "ml-64") : "ml-0"
         }`}
       >
         <Header toggleSidebar={toggleSidebar} />
         <main className="p-4 md:p-6">
-          {children}
+          <div className="animate-fade-in">
+            {children}
+          </div>
         </main>
       </div>
       
