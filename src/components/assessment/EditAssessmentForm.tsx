@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 
@@ -27,7 +26,6 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
     defaultValues: {
       name: assessment.name,
       code: assessment.code,
-      description: assessment.description || "",
       instructions: assessment.instructions || "",
       duration_minutes: assessment.duration_minutes,
       start_time: assessment.start_time ? format(new Date(assessment.start_time), "yyyy-MM-dd'T'HH:mm") : "",
@@ -77,15 +75,6 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
             <p className="text-sm text-red-500">{errors.code.message as string}</p>
           )}
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          {...register("description")}
-          rows={2}
-        />
       </div>
 
       <div className="space-y-2">

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye, BarChart } from "lucide-react";
@@ -327,7 +326,7 @@ const Assessments: React.FC = () => {
 
       {/* Edit Assessment Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Assessment</DialogTitle>
           </DialogHeader>
