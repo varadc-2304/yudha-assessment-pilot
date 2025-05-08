@@ -34,8 +34,8 @@ const App = () => (
           <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
           <Route path="/assessments" element={<DashboardLayout><Assessments /></DashboardLayout>} />
           <Route path="/create-assessment" element={<DashboardLayout><CreateAssessment /></DashboardLayout>} />
-          <Route path="/assessments/:id" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-          <Route path="/assessments/:id/edit" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+          <Route path="/assessments/:id" element={<DashboardLayout><Assessments /></DashboardLayout>} />
+          <Route path="/assessments/:id/edit" element={<DashboardLayout><Assessments /></DashboardLayout>} />
           <Route path="/mcq-questions" element={<DashboardLayout><MCQQuestions /></DashboardLayout>} />
           <Route path="/coding-questions" element={<DashboardLayout><CodingQuestions /></DashboardLayout>} />
           <Route path="/results" element={<DashboardLayout><Results /></DashboardLayout>} />

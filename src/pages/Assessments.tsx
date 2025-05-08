@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Assessment } from "@/types/assessment";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import AssessmentDetail from "@/components/assessment/AssessmentDetail";
+import EditAssessmentForm from "@/components/assessment/EditAssessmentForm";
 
 const Assessments: React.FC = () => {
   const { toast } = useToast();
@@ -24,6 +26,8 @@ const Assessments: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch assessments from Supabase
@@ -69,12 +73,61 @@ const Assessments: React.FC = () => {
     }
   });
 
+  // Update assessment mutation
+  const updateAssessmentMutation = useMutation({
+    mutationFn: async (data: { id: string; assessment: Partial<Assessment> }) => {
+      const { id, assessment } = data;
+      const { error } = await supabase
+        .from('assessments')
+        .update(assessment)
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { id, assessment };
+    },
+    onSuccess: () => {
+      setIsEditDialogOpen(false);
+      toast({
+        title: "Assessment updated",
+        description: "The assessment has been successfully updated."
+      });
+      queryClient.invalidateQueries({ queryKey: ['assessments'] });
+    },
+    onError: (err: any) => {
+      console.error("Error updating assessment:", err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update assessment",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
 
   const handleDelete = (id: string) => {
     deleteAssessmentMutation.mutate(id);
+  };
+
+  const handleUpdate = (assessmentData: Partial<Assessment>) => {
+    if (selectedAssessment) {
+      updateAssessmentMutation.mutate({
+        id: selectedAssessment.id,
+        assessment: assessmentData
+      });
+    }
+  };
+
+  const handleViewAssessment = (assessment: Assessment) => {
+    setSelectedAssessment(assessment);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditAssessment = (assessment: Assessment) => {
+    setSelectedAssessment(assessment);
+    setIsEditDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -189,17 +242,13 @@ const Assessments: React.FC = () => {
                       </div>
                     </div>
                     <div className="bg-gray-50 p-6 flex flex-row md:flex-col justify-between items-center gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/assessments/${assessment.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Link>
+                      <Button variant="outline" size="sm" onClick={() => handleViewAssessment(assessment)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/assessments/${assessment.id}/edit`}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Link>
+                      <Button variant="outline" size="sm" onClick={() => handleEditAssessment(assessment)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       </Button>
                       <Button
                         variant="outline"
@@ -258,6 +307,38 @@ const Assessments: React.FC = () => {
               {deleteAssessmentMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Assessment Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Assessment Details</DialogTitle>
+          </DialogHeader>
+          {selectedAssessment && (
+            <AssessmentDetail 
+              assessment={selectedAssessment} 
+              onClose={() => setIsViewDialogOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Assessment Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Edit Assessment</DialogTitle>
+          </DialogHeader>
+          {selectedAssessment && (
+            <EditAssessmentForm 
+              assessment={selectedAssessment} 
+              onUpdate={handleUpdate}
+              onCancel={() => setIsEditDialogOpen(false)}
+              isSubmitting={updateAssessmentMutation.isPending}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
