@@ -1,17 +1,18 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Assessments from "./pages/Assessments";
-import CreateAssessment from "./pages/CreateAssessment";
 import MCQQuestions from "./pages/MCQQuestions";
 import CodingQuestions from "./pages/CodingQuestions";
 import Results from "./pages/Results";
-import Settings from "./pages/Settings";
+import Users from "./pages/Users";
+import CreateAssessment from "./pages/CreateAssessment";
 import NotFound from "./pages/NotFound";
 import CreateMCQForm from "./components/mcq/CreateMCQForm";
 import CreateCodingForm from "./components/coding/CreateCodingForm";
@@ -31,7 +32,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
           <Route path="/assessments" element={<DashboardLayout><Assessments /></DashboardLayout>} />
@@ -44,10 +45,11 @@ const App = () => (
           <Route path="/create-coding-question" element={<DashboardLayout><CreateCodingForm /></DashboardLayout>} />
           <Route path="/results" element={<DashboardLayout><Results /></DashboardLayout>} />
           <Route path="/results/:assessmentId" element={<DashboardLayout><Results /></DashboardLayout>} />
+          <Route path="/users" element={<DashboardLayout><Users /></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </TooltipProvider>
   </QueryClientProvider>
 );

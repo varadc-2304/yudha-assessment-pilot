@@ -7,8 +7,8 @@ import {
   CheckSquare,
   Code,
   BarChart,
-  Settings,
   Menu,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,9 +46,9 @@ const navItems = [
     href: "/results",
   },
   {
-    title: "Settings",
-    icon: Settings,
-    href: "/settings",
+    title: "Users",
+    icon: Users,
+    href: "/users",
   },
 ];
 
