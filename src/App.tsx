@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 
@@ -12,6 +13,7 @@ import MCQQuestions from "./pages/MCQQuestions";
 import CodingQuestions from "./pages/CodingQuestions";
 import Results from "./pages/Results";
 import Users from "./pages/Users";
+import Settings from "./pages/Settings";
 import CreateAssessment from "./pages/CreateAssessment";
 import NotFound from "./pages/NotFound";
 import CreateMCQForm from "./components/mcq/CreateMCQForm";
