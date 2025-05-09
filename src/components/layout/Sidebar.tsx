@@ -8,7 +8,6 @@ import {
   Code,
   BarChart,
   Menu,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,11 +43,6 @@ const navItems = [
     title: "Results",
     icon: BarChart,
     href: "/results",
-  },
-  {
-    title: "Users",
-    icon: Users,
-    href: "/users",
   },
 ];
 

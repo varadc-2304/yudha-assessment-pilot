@@ -12,12 +12,14 @@ import Assessments from "./pages/Assessments";
 import MCQQuestions from "./pages/MCQQuestions";
 import CodingQuestions from "./pages/CodingQuestions";
 import Results from "./pages/Results";
-import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import CreateAssessment from "./pages/CreateAssessment";
 import NotFound from "./pages/NotFound";
 import CreateMCQForm from "./components/mcq/CreateMCQForm";
 import CreateCodingForm from "./components/coding/CreateCodingForm";
+import Login from "./pages/Login";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,22 +37,24 @@ const App = () => (
       <Toaster />
       <Sonner />
       <Router>
-        <Routes>
-          <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-          <Route path="/assessments" element={<DashboardLayout><Assessments /></DashboardLayout>} />
-          <Route path="/create-assessment" element={<DashboardLayout><CreateAssessment /></DashboardLayout>} />
-          <Route path="/assessments/:id" element={<DashboardLayout><Assessments /></DashboardLayout>} />
-          <Route path="/assessments/:id/edit" element={<DashboardLayout><Assessments /></DashboardLayout>} />
-          <Route path="/mcq-questions" element={<DashboardLayout><MCQQuestions /></DashboardLayout>} />
-          <Route path="/create-mcq-question" element={<DashboardLayout><CreateMCQForm /></DashboardLayout>} />
-          <Route path="/coding-questions" element={<DashboardLayout><CodingQuestions /></DashboardLayout>} />
-          <Route path="/create-coding-question" element={<DashboardLayout><CreateCodingForm /></DashboardLayout>} />
-          <Route path="/results" element={<DashboardLayout><Results /></DashboardLayout>} />
-          <Route path="/results/:assessmentId" element={<DashboardLayout><Results /></DashboardLayout>} />
-          <Route path="/users" element={<DashboardLayout><Users /></DashboardLayout>} />
-          <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<ProtectedRoute><DashboardLayout><Dashboard /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/assessments" element={<ProtectedRoute><DashboardLayout><Assessments /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/create-assessment" element={<ProtectedRoute><DashboardLayout><CreateAssessment /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/assessments/:id" element={<ProtectedRoute><DashboardLayout><Assessments /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/assessments/:id/edit" element={<ProtectedRoute><DashboardLayout><Assessments /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/mcq-questions" element={<ProtectedRoute><DashboardLayout><MCQQuestions /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/create-mcq-question" element={<ProtectedRoute><DashboardLayout><CreateMCQForm /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/coding-questions" element={<ProtectedRoute><DashboardLayout><CodingQuestions /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/create-coding-question" element={<ProtectedRoute><DashboardLayout><CreateCodingForm /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/results" element={<ProtectedRoute><DashboardLayout><Results /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/results/:assessmentId" element={<ProtectedRoute><DashboardLayout><Results /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </Router>
     </TooltipProvider>
   </QueryClientProvider>
