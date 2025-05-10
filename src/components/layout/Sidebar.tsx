@@ -66,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           "flex flex-col"
         )}
       >
-        <div className="flex items-center justify-center p-4">
+{/*         <div className="flex items-center justify-center p-4">
           <Link to="/" className="flex items-center gap-2">
             <img 
               src="/Yudha.png" 
@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             />
             <span className="text-white text-xl font-bold">Yudha Admin</span>
           </Link>
-        </div>
+        </div> */}
 
         <div className="flex-1 overflow-auto py-4">
           <nav className="space-y-2 px-2">
