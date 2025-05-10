@@ -347,6 +347,11 @@ const CreateCodingForm = () => {
     ));
   };
 
+  // Add handleCancel function
+  const handleCancel = () => {
+    navigate("/coding-questions");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -631,7 +636,7 @@ const CreateCodingForm = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => navigate("/coding-questions")}
+                onClick={handleCancel}
               >
                 Cancel
               </Button>

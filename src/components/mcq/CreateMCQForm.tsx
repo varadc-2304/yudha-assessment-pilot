@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -168,6 +167,11 @@ const CreateMCQForm = () => {
     ));
   };
 
+  // Add handleCancel function
+  const handleCancel = () => {
+    navigate("/mcq-questions");
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -317,7 +321,7 @@ const CreateMCQForm = () => {
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => navigate("/mcq-questions")}
+                onClick={handleCancel}
               >
                 Cancel
               </Button>
