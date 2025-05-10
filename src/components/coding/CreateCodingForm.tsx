@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,7 +26,7 @@ type CodingFormValues = z.infer<typeof codingFormSchema>;
 
 interface LanguageOption {
   id: string;
-  languageType: "python" | "javascript" | "java" | "cpp";
+  languageType: "c" | "cpp" | "java" | "python";
   solutionTemplate: string;
 }
 
@@ -227,6 +226,22 @@ const CreateCodingForm = () => {
     });
   };
 
+  // Default templates for different languages
+  const getDefaultTemplate = (lang: "c" | "cpp" | "java" | "python") => {
+    switch (lang) {
+      case "c":
+        return "#include <stdio.h>\n\nint main() {\n    // Write your solution here\n    return 0;\n}";
+      case "cpp":
+        return "#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}";
+      case "java":
+        return "public class Solution {\n    public static void main(String[] args) {\n        // Write your solution here\n    }\n}";
+      case "python":
+        return "# Write your solution here";
+      default:
+        return "# Write your solution here";
+    }
+  };
+
   // Language management
   const addLanguageOption = () => {
     setLanguageOptions(prev => [
@@ -234,7 +249,7 @@ const CreateCodingForm = () => {
       { 
         id: crypto.randomUUID(), 
         languageType: "python", 
-        solutionTemplate: "# Write your solution here" 
+        solutionTemplate: getDefaultTemplate("python")
       }
     ]);
   };
@@ -251,9 +266,13 @@ const CreateCodingForm = () => {
     setLanguageOptions(prev => prev.filter(lang => lang.id !== id));
   };
 
-  const updateLanguageType = (id: string, value: "python" | "javascript" | "java" | "cpp") => {
+  const updateLanguageType = (id: string, value: "c" | "cpp" | "java" | "python") => {
     setLanguageOptions(prev => prev.map(lang => 
-      lang.id === id ? { ...lang, languageType: value } : lang
+      lang.id === id ? { 
+        ...lang, 
+        languageType: value,
+        solutionTemplate: getDefaultTemplate(value)
+      } : lang
     ));
   };
 
@@ -451,10 +470,10 @@ const CreateCodingForm = () => {
                           <SelectValue placeholder="Select language" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="python">Python</SelectItem>
-                          <SelectItem value="javascript">JavaScript</SelectItem>
-                          <SelectItem value="java">Java</SelectItem>
+                          <SelectItem value="c">C</SelectItem>
                           <SelectItem value="cpp">C++</SelectItem>
+                          <SelectItem value="java">Java</SelectItem>
+                          <SelectItem value="python">Python</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

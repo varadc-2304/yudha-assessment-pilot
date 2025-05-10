@@ -44,7 +44,7 @@ export interface CodingQuestion {
   sampleInput?: string;
   sampleOutput?: string;
   marks: number;
-  language: "javascript" | "python" | "java" | "cpp";
+  language: "c" | "cpp" | "java" | "python";
   supportedLanguages?: string[];
   timeLimit?: number; // in seconds
   assessmentId?: string;

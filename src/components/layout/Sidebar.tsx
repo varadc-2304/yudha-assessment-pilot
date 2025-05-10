@@ -7,10 +7,8 @@ import {
   CheckSquare,
   Code,
   BarChart,
-  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
@@ -60,28 +58,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - fixed width, no collapsible functionality */}
       <div
         className={cn(
-          "fixed top-0 left-0 h-full bg-sidebar z-30 transition-all duration-300 ease-in-out",
-          isOpen ? "w-64" : isMobile ? "-translate-x-full" : "w-16",
+          "fixed top-0 left-0 h-full bg-sidebar z-30 w-64 transition-transform duration-300",
+          isMobile && !isOpen && "-translate-x-full",
           "flex flex-col"
         )}
       >
         <div className="flex items-center justify-between p-4">
-          {isOpen && (
-            <Link to="/" className="flex items-center">
-              <span className="text-white text-xl font-bold">Yudha Admin</span>
-            </Link>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-sidebar-accent"
-            onClick={toggleSidebar}
-          >
-            <Menu size={20} />
-          </Button>
+          <Link to="/" className="flex items-center">
+            <span className="text-white text-xl font-bold">Yudha Admin</span>
+          </Link>
         </div>
 
         <div className="flex-1 overflow-auto py-4">
@@ -97,11 +85,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                     : "text-gray-300 hover:text-white hover:bg-sidebar-accent/50"
                 )}
               >
-                <item.icon
-                  size={20}
-                  className={cn("flex-shrink-0", isOpen ? "mr-3" : "mx-auto")}
-                />
-                {isOpen && <span>{item.title}</span>}
+                <item.icon size={20} className="flex-shrink-0 mr-3" />
+                <span>{item.title}</span>
               </Link>
             ))}
           </nav>

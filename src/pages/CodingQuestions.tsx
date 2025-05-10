@@ -137,7 +137,7 @@ const CodingQuestions: React.FC = () => {
           question: q.title,
           description: q.description,
           marks: totalMarks,
-          language: primaryLanguage as any,
+          language: primaryLanguage as "c" | "cpp" | "java" | "python",
           supportedLanguages: languages,
           assessment: assessmentMap.get(q.assessment_id) || { name: 'Unknown', code: '' },
           assessmentId: q.assessment_id,
