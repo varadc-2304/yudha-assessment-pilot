@@ -64,17 +64,17 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				yudha: {
-					50: '#f5f3ff',
-					100: '#ede9fe',
-					200: '#ddd6fe',
-					300: '#c4b5fd',
-					400: '#a78bfa',
-					500: '#8b5cf6',
-					600: '#7c3aed',
-					700: '#6d28d9',
-					800: '#5b21b6',
-					900: '#4c1d95',
-					950: '#2e1065'
+					50: '#fff5f5',
+					100: '#ffebeb',
+					200: '#ffcccc',
+					300: '#ff9999',
+					400: '#ff6666',
+					500: '#ff3333',
+					600: '#ff0000',
+					700: '#cc0000',
+					800: '#990000',
+					900: '#660000',
+					950: '#330000'
 				}
 			},
 			borderRadius: {
@@ -155,7 +155,7 @@ export default {
 				'gradient-soft': 'linear-gradient(to right, var(--tw-gradient-stops))',
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
 				'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-				'gradient-purple': 'linear-gradient(135deg, #9b87f5 0%, #6d28d9 100%)',
+				'gradient-red': 'linear-gradient(135deg, #ff3333 0%, #cc0000 100%)',
 			}
 		}
 	},

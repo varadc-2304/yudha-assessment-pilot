@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         />
       )}
 
-      {/* Sidebar - fixed width, no collapsible functionality */}
+      {/* Sidebar */}
       <div
         className={cn(
           "fixed top-0 left-0 h-full bg-sidebar z-30 w-64 transition-transform duration-300",
@@ -66,8 +66,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           "flex flex-col"
         )}
       >
-        <div className="flex items-center justify-between p-4">
-          <Link to="/" className="flex items-center">
+        <div className="flex items-center justify-center p-4">
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/Yudha.png" 
+              alt="Yudha Logo" 
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-white text-xl font-bold">Yudha Admin</span>
           </Link>
         </div>
@@ -82,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                   "flex items-center p-3 rounded-md text-sm transition-colors",
                   location.pathname === item.href
                     ? "bg-sidebar-accent text-white"
-                    : "text-gray-300 hover:text-white hover:bg-sidebar-accent/50"
+                    : "text-gray-200 hover:text-white hover:bg-sidebar-accent/50"
                 )}
               >
                 <item.icon size={20} className="flex-shrink-0 mr-3" />

@@ -22,9 +22,16 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-white border-b border-gray-200 py-3 px-4 md:px-6 flex items-center justify-between">
+    <header className="bg-white border-b border-gray-200 py-3 px-4 md:px-6 flex items-center justify-between shadow-sm">
       <div className="flex items-center">
-        <h1 className="text-xl font-semibold text-gray-800">Yudha Admin</h1>
+        <div className="flex items-center gap-2">
+          <img 
+            src="/Yudha.png" 
+            alt="Yudha Logo" 
+            className="w-6 h-6 object-contain"
+          />
+          <h1 className="text-xl font-semibold text-yudha-700">Yudha Admin</h1>
+        </div>
       </div>
       
       <div className="flex items-center">

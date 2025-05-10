@@ -21,11 +21,14 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-purple-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 to-red-600">
       <div className="w-full max-w-md px-4">
-        <Card className="border-purple-300/10 shadow-xl bg-white/95 backdrop-blur">
+        <Card className="border-red-300/10 shadow-xl bg-white/95 backdrop-blur">
           <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-2xl font-bold">Yudha Admin Portal</CardTitle>
+            <div className="flex justify-center mb-2">
+              <img src="/Yudha.png" alt="Yudha Logo" className="w-16 h-16 object-contain" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-red-900">Yudha Admin Portal</CardTitle>
             <CardDescription>Sign in to access the admin dashboard</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -72,8 +75,7 @@ const Login = () => {
             <CardFooter>
               <Button 
                 type="submit" 
-                className="w-full" 
-                variant="gradient"
+                className="w-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800" 
                 disabled={loading}
               >
                 {loading ? (
