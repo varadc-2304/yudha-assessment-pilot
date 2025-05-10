@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -167,9 +168,9 @@ const CreateMCQForm = () => {
     ));
   };
 
-  // Add handleCancel function
+  // Fix the handleCancel function to use window.location
   const handleCancel = () => {
-    navigate("/mcq-questions");
+    window.location.href = "/mcq-questions";
   };
 
   return (

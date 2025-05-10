@@ -347,9 +347,9 @@ const CreateCodingForm = () => {
     ));
   };
 
-  // Add handleCancel function
+  // Fix the handleCancel function to use window.location
   const handleCancel = () => {
-    navigate("/coding-questions");
+    window.location.href = "/coding-questions";
   };
 
   return (
