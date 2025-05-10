@@ -6,32 +6,43 @@ import { Bar, BarChart as RechartsBarChart, CartesianGrid, Legend, ResponsiveCon
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
+
   // Query to fetch assessment stats
   const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
-    queryKey: ['all-assessments'],
+    queryKey: ['all-assessments', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
-        .select('*');
+        .select('*')
+        .eq('created_by', user?.id);
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!user?.id
   });
 
-  // Query to fetch results stats
+  // Query to fetch results stats for the current admin's assessments
   const { data: results, isLoading: isLoadingResults } = useQuery({
-    queryKey: ['all-results'],
+    queryKey: ['all-results', user?.id],
     queryFn: async () => {
+      if (!assessments || assessments.length === 0) return [];
+      
+      const assessmentIds = assessments.map(a => a.id);
+      
       const { data, error } = await supabase
         .from('results')
-        .select('*');
+        .select('*')
+        .in('assessment_id', assessmentIds);
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!assessments && assessments.length > 0
   });
 
   // Calculate statistics based on fetched data
@@ -76,12 +87,13 @@ const Dashboard: React.FC = () => {
 
   // Query to fetch recent assessment data
   const { data: recentAssessments, isLoading: isLoadingRecent } = useQuery({
-    queryKey: ['recent-assessments'],
+    queryKey: ['recent-assessments', user?.id],
     queryFn: async () => {
-      // Fetch the most recent assessments
+      // Fetch the most recent assessments created by this admin
       const { data: recentAssessments, error: assessmentError } = await supabase
         .from('assessments')
         .select('id, name, code')
+        .eq('created_by', user?.id)
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -112,7 +124,8 @@ const Dashboard: React.FC = () => {
       );
       
       return assessmentData;
-    }
+    },
+    enabled: !!user?.id
   });
 
   // Generate chart data based on recent assessments

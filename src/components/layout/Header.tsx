@@ -57,7 +57,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-gray-200 py-3 px-4 md:px-6 flex items-center justify-between shadow-sm">
-      <div className="flex items-center gap-6">
+      <div className="flex items-center">
         <div className="flex items-center gap-2">
           <img 
             src="/Yudha.png" 
@@ -66,8 +66,11 @@ const Header: React.FC = () => {
           />
           <h1 className="text-xl font-semibold text-red-600">Yudha Admin</h1>
         </div>
+      </div>
 
-        <nav className="hidden md:flex space-x-2">
+      {/* Centered Navigation */}
+      <div className="hidden md:flex justify-center flex-1">
+        <nav className="flex space-x-2">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -84,40 +87,40 @@ const Header: React.FC = () => {
             </Link>
           ))}
         </nav>
-
-        {/* Mobile navigation */}
-        <NavigationMenu className="md:hidden">
-          <NavigationMenuList>
-            <NavigationMenuItem>
-              <NavigationMenuTrigger className="bg-transparent hover:bg-red-50 hover:text-red-600">
-                Navigation
-              </NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <ul className="grid w-[200px] gap-1 p-2">
-                  {navItems.map((item) => (
-                    <li key={item.href}>
-                      <NavigationMenuLink asChild>
-                        <Link
-                          to={item.href}
-                          className={cn(
-                            "flex items-center gap-2 p-2 rounded-md text-sm hover:bg-red-50 hover:text-red-600",
-                            location.pathname === item.href
-                              ? "bg-red-100 text-red-700 font-medium"
-                              : "text-gray-700"
-                          )}
-                        >
-                          <item.icon size={16} />
-                          {item.title}
-                        </Link>
-                      </NavigationMenuLink>
-                    </li>
-                  ))}
-                </ul>
-              </NavigationMenuContent>
-            </NavigationMenuItem>
-          </NavigationMenuList>
-        </NavigationMenu>
       </div>
+
+      {/* Mobile navigation */}
+      <NavigationMenu className="md:hidden">
+        <NavigationMenuList>
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent hover:bg-red-50 hover:text-red-600">
+              Navigation
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <ul className="grid w-[200px] gap-1 p-2">
+                {navItems.map((item) => (
+                  <li key={item.href}>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to={item.href}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-md text-sm hover:bg-red-50 hover:text-red-600",
+                          location.pathname === item.href
+                            ? "bg-red-100 text-red-700 font-medium"
+                            : "text-gray-700"
+                        )}
+                      >
+                        <item.icon size={16} />
+                        {item.title}
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                ))}
+              </ul>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
       
       <div className="flex items-center gap-2">
         <DropdownMenu>

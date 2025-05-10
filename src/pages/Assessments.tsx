@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye, BarChart } from "lucide-react";
@@ -18,10 +19,12 @@ import { Assessment } from "@/types/assessment";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import AssessmentDetail from "@/components/assessment/AssessmentDetail";
 import EditAssessmentForm from "@/components/assessment/EditAssessmentForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Assessments: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -29,23 +32,38 @@ const Assessments: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch assessments from Supabase
+  // Fetch assessments from Supabase - only those created by the current admin
   const { data: assessments, isLoading, error } = useQuery({
-    queryKey: ['assessments'],
+    queryKey: ['assessments', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
+        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Assessment[];
-    }
+    },
+    enabled: !!user?.id
   });
 
   // Delete assessment mutation
   const deleteAssessmentMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Verify this assessment belongs to the current admin
+      const { data: assessmentCheck, error: checkError } = await supabase
+        .from('assessments')
+        .select('created_by')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      if (assessmentCheck.created_by !== user?.id) {
+        throw new Error("You don't have permission to delete this assessment");
+      }
+      
       const { error } = await supabase
         .from('assessments')
         .delete()
@@ -76,6 +94,20 @@ const Assessments: React.FC = () => {
   const updateAssessmentMutation = useMutation({
     mutationFn: async (data: { id: string; assessment: Partial<Assessment> }) => {
       const { id, assessment } = data;
+      
+      // Verify this assessment belongs to the current admin
+      const { data: assessmentCheck, error: checkError } = await supabase
+        .from('assessments')
+        .select('created_by')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) throw checkError;
+      
+      if (assessmentCheck.created_by !== user?.id) {
+        throw new Error("You don't have permission to update this assessment");
+      }
+      
       const { error } = await supabase
         .from('assessments')
         .update(assessment)

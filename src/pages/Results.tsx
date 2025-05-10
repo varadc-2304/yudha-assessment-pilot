@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AssessmentResult } from "@/types/assessment";
+import { useAuth } from "@/contexts/AuthContext";
 
 const COLORS = ["#8884d8", "#FF8042"];
 const PASS_THRESHOLD = 60; // Assuming 60% is passing
@@ -29,53 +29,128 @@ const PASS_THRESHOLD = 60; // Assuming 60% is passing
 const Results: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId?: string }>();
   const [searchTerm, setSearchTerm] = useState("");
+  const { user } = useAuth();
+
+  // First, fetch all assessments created by this admin
+  const { data: adminAssessments, isLoading: isLoadingAssessments } = useQuery({
+    queryKey: ['admin-assessments', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id')
+        .eq('created_by', user?.id);
+      
+      if (error) throw error;
+      return data.map(a => a.id);
+    },
+    enabled: !!user?.id
+  });
 
   // Fetch results data
   const { data: results, isLoading, error } = useQuery({
-    queryKey: ['results', assessmentId],
+    queryKey: ['results', assessmentId, user?.id],
     queryFn: async () => {
-      let query = supabase.from('results').select(`
-        id,
-        assessment_id,
-        user_id,
-        total_score,
-        percentage,
-        total_marks,
-        completed_at,
-        created_at,
-        is_cheated,
-        assessments(name, code),
-        auth(name, email, prn, department)
-      `);
-      
+      // If specific assessment ID is provided, check if it belongs to current admin
       if (assessmentId) {
-        query = query.eq('assessment_id', assessmentId);
-      }
-      
-      const { data, error } = await query.order('completed_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      return data.map(result => ({
-        id: result.id,
-        assessment_id: result.assessment_id,
-        user_id: result.user_id,
-        userName: result.auth.name || 'Unknown',
-        userEmail: result.auth.email,
-        userPrn: result.auth.prn,
-        userDepartment: result.auth.department,
-        total_score: result.total_score,
-        percentage: result.percentage,
-        total_marks: result.total_marks,
-        completed_at: result.completed_at,
-        created_at: result.created_at,
-        is_cheated: result.is_cheated,
-        assessment: {
-          name: result.assessments.name,
-          code: result.assessments.code
+        const { data: assessmentCheck, error: checkError } = await supabase
+          .from('assessments')
+          .select('created_by')
+          .eq('id', assessmentId)
+          .single();
+        
+        if (checkError) throw checkError;
+        
+        // If assessment doesn't belong to current admin, return empty
+        if (assessmentCheck && assessmentCheck.created_by !== user?.id) {
+          return [];
         }
-      }));
-    }
+        
+        let query = supabase.from('results').select(`
+          id,
+          assessment_id,
+          user_id,
+          total_score,
+          percentage,
+          total_marks,
+          completed_at,
+          created_at,
+          is_cheated,
+          assessments(name, code),
+          auth(name, email, prn, department)
+        `)
+        .eq('assessment_id', assessmentId);
+        
+        const { data, error } = await query.order('completed_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        return data.map(result => ({
+          id: result.id,
+          assessment_id: result.assessment_id,
+          user_id: result.user_id,
+          userName: result.auth.name || 'Unknown',
+          userEmail: result.auth.email,
+          userPrn: result.auth.prn,
+          userDepartment: result.auth.department,
+          total_score: result.total_score,
+          percentage: result.percentage,
+          total_marks: result.total_marks,
+          completed_at: result.completed_at,
+          created_at: result.created_at,
+          is_cheated: result.is_cheated,
+          assessment: {
+            name: result.assessments.name,
+            code: result.assessments.code
+          }
+        }));
+      } 
+      // If no specific assessment ID, fetch results for all of admin's assessments
+      else {
+        if (!adminAssessments || adminAssessments.length === 0) {
+          return [];
+        }
+        
+        let query = supabase.from('results').select(`
+          id,
+          assessment_id,
+          user_id,
+          total_score,
+          percentage,
+          total_marks,
+          completed_at,
+          created_at,
+          is_cheated,
+          assessments(name, code),
+          auth(name, email, prn, department)
+        `)
+        .in('assessment_id', adminAssessments);
+        
+        const { data, error } = await query.order('completed_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        return data.map(result => ({
+          id: result.id,
+          assessment_id: result.assessment_id,
+          user_id: result.user_id,
+          userName: result.auth.name || 'Unknown',
+          userEmail: result.auth.email,
+          userPrn: result.auth.prn,
+          userDepartment: result.auth.department,
+          total_score: result.total_score,
+          percentage: result.percentage,
+          total_marks: result.total_marks,
+          completed_at: result.completed_at,
+          created_at: result.created_at,
+          is_cheated: result.is_cheated,
+          assessment: {
+            name: result.assessments.name,
+            code: result.assessments.code
+          }
+        }));
+      }
+    },
+    enabled: !!user?.id && (!!assessmentId || (!!adminAssessments && adminAssessments.length > 0))
   });
 
   // Fetch assessment details if assessmentId is provided
@@ -88,12 +163,13 @@ const Results: React.FC = () => {
         .from('assessments')
         .select('*')
         .eq('id', assessmentId)
+        .eq('created_by', user?.id)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!assessmentId
+    enabled: !!assessmentId && !!user?.id
   });
 
   // Filter results based on search term
@@ -188,7 +264,7 @@ const Results: React.FC = () => {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isLoadingAssessments) {
     return (
       <div className="flex justify-center items-center h-64">
         <LoadingSpinner size="lg" />
