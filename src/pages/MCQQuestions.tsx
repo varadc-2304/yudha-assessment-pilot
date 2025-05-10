@@ -18,6 +18,7 @@ import { MCQQuestion } from "@/types/assessment";
 import CreateMCQForm from "@/components/mcq/CreateMCQForm";
 import EditMCQForm from "@/components/mcq/EditMCQForm";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DatabaseMCQQuestion = {
   id: string;
@@ -40,6 +41,7 @@ const MCQQuestions: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -48,14 +50,34 @@ const MCQQuestions: React.FC = () => {
 
   // Fetch MCQ questions with their options
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['mcq-questions'],
+    queryKey: ['mcq-questions', user?.id],
     queryFn: async () => {
+      // First, get the assessments created by this admin
+      const { data: adminAssessments, error: assessmentsError } = await supabase
+        .from('assessments')
+        .select('id')
+        .eq('created_by', user?.id);
+      
+      if (assessmentsError) throw assessmentsError;
+      
+      if (!adminAssessments || adminAssessments.length === 0) {
+        return []; // No assessments created by this admin
+      }
+      
+      const assessmentIds = adminAssessments.map(a => a.id);
+      
+      // Now get MCQ questions for these assessments
       const { data: mcqQuestions, error: questionsError } = await supabase
         .from('mcq_questions')
         .select('*')
+        .in('assessment_id', assessmentIds)
         .order('order_index', { ascending: true });
       
       if (questionsError) throw questionsError;
+      
+      if (!mcqQuestions || mcqQuestions.length === 0) {
+        return []; // No MCQ questions for this admin's assessments
+      }
 
       // For each question, fetch its options
       const questionsWithOptions = await Promise.all(
@@ -76,7 +98,6 @@ const MCQQuestions: React.FC = () => {
       );
 
       // Also fetch assessment names to display
-      const assessmentIds = [...new Set(mcqQuestions.map(q => q.assessment_id))];
       const { data: assessments } = await supabase
         .from('assessments')
         .select('id, name, code')
@@ -103,12 +124,35 @@ const MCQQuestions: React.FC = () => {
           isCorrect: o.is_correct
         }))
       }));
-    }
+    },
+    enabled: !!user?.id
   });
 
   // Delete MCQ question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if this question belongs to an assessment created by this admin
+      const { data: question, error: questionError } = await supabase
+        .from('mcq_questions')
+        .select('assessment_id')
+        .eq('id', id)
+        .single();
+      
+      if (questionError) throw questionError;
+      
+      // Verify assessment ownership
+      const { data: assessment, error: assessmentError } = await supabase
+        .from('assessments')
+        .select('created_by')
+        .eq('id', question.assessment_id)
+        .single();
+      
+      if (assessmentError) throw assessmentError;
+      
+      if (assessment.created_by !== user?.id) {
+        throw new Error("You don't have permission to delete this question");
+      }
+      
       // Delete the MCQ question (cascade will delete options)
       const { error } = await supabase
         .from('mcq_questions')

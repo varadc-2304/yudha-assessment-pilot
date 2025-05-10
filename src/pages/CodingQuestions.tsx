@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { CodingQuestion } from "@/types/assessment";
 import CreateCodingForm from "@/components/coding/CreateCodingForm";
 import EditCodingForm from "@/components/coding/EditCodingForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 type DatabaseCodingQuestion = {
   id: string;
@@ -53,6 +54,7 @@ type DatabaseCodingQuestion = {
 const CodingQuestions: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedQuestion, setSelectedQuestion] = useState<CodingQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -61,14 +63,34 @@ const CodingQuestions: React.FC = () => {
 
   // Fetch coding questions with their related data
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['coding-questions'],
+    queryKey: ['coding-questions', user?.id],
     queryFn: async () => {
+      // First, get the assessments created by this admin
+      const { data: adminAssessments, error: assessmentsError } = await supabase
+        .from('assessments')
+        .select('id')
+        .eq('created_by', user?.id);
+      
+      if (assessmentsError) throw assessmentsError;
+      
+      if (!adminAssessments || adminAssessments.length === 0) {
+        return []; // No assessments created by this admin
+      }
+      
+      const assessmentIds = adminAssessments.map(a => a.id);
+      
+      // Now get coding questions for these assessments
       const { data: codingQuestions, error: questionsError } = await supabase
         .from('coding_questions')
         .select('*')
+        .in('assessment_id', assessmentIds)
         .order('order_index', { ascending: true });
       
       if (questionsError) throw questionsError;
+      
+      if (!codingQuestions || codingQuestions.length === 0) {
+        return []; // No coding questions for this admin's assessments
+      }
 
       // For each question, fetch its related data
       const questionsWithRelatedData = await Promise.all(
@@ -109,7 +131,6 @@ const CodingQuestions: React.FC = () => {
       );
 
       // Also fetch assessment names to display
-      const assessmentIds = [...new Set(codingQuestions.map(q => q.assessment_id))];
       const { data: assessments } = await supabase
         .from('assessments')
         .select('id, name, code')
@@ -159,12 +180,35 @@ const CodingQuestions: React.FC = () => {
           }))
         };
       });
-    }
+    },
+    enabled: !!user?.id
   });
 
   // Delete coding question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if this question belongs to an assessment created by this admin
+      const { data: question, error: questionError } = await supabase
+        .from('coding_questions')
+        .select('assessment_id')
+        .eq('id', id)
+        .single();
+      
+      if (questionError) throw questionError;
+      
+      // Verify assessment ownership
+      const { data: assessment, error: assessmentError } = await supabase
+        .from('assessments')
+        .select('created_by')
+        .eq('id', question.assessment_id)
+        .single();
+      
+      if (assessmentError) throw assessmentError;
+      
+      if (assessment.created_by !== user?.id) {
+        throw new Error("You don't have permission to delete this question");
+      }
+      
       // Delete the coding question (cascade will delete related data)
       const { error } = await supabase
         .from('coding_questions')
