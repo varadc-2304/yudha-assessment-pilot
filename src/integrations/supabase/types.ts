@@ -18,6 +18,7 @@ export type Database = {
           end_time: string | null
           id: string
           instructions: string | null
+          is_ai_proctored: boolean
           is_practice: boolean
           name: string
           reattempt: boolean
@@ -32,6 +33,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           instructions?: string | null
+          is_ai_proctored?: boolean
           is_practice?: boolean
           name: string
           reattempt?: boolean
@@ -46,6 +48,7 @@ export type Database = {
           end_time?: string | null
           id?: string
           instructions?: string | null
+          is_ai_proctored?: boolean
           is_practice?: boolean
           name?: string
           reattempt?: boolean
@@ -142,6 +145,44 @@ export type Database = {
           },
         ]
       }
+      coding_examples_bank: {
+        Row: {
+          coding_question_bank_id: string
+          created_at: string
+          explanation: string | null
+          id: string
+          input: string
+          order_index: number
+          output: string
+        }
+        Insert: {
+          coding_question_bank_id: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          input: string
+          order_index: number
+          output: string
+        }
+        Update: {
+          coding_question_bank_id?: string
+          created_at?: string
+          explanation?: string | null
+          id?: string
+          input?: string
+          order_index?: number
+          output?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coding_examples_bank_coding_question_bank_id_fkey"
+            columns: ["coding_question_bank_id"]
+            isOneToOne: false
+            referencedRelation: "coding_question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coding_languages: {
         Row: {
           coding_lang: string
@@ -173,6 +214,79 @@ export type Database = {
             columns: ["coding_question_id"]
             isOneToOne: false
             referencedRelation: "coding_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coding_languages_bank: {
+        Row: {
+          coding_lang: string
+          coding_question_bank_id: string
+          constraints: string[] | null
+          created_at: string
+          id: string
+          solution_template: string
+        }
+        Insert: {
+          coding_lang: string
+          coding_question_bank_id: string
+          constraints?: string[] | null
+          created_at?: string
+          id?: string
+          solution_template: string
+        }
+        Update: {
+          coding_lang?: string
+          coding_question_bank_id?: string
+          constraints?: string[] | null
+          created_at?: string
+          id?: string
+          solution_template?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coding_languages_bank_coding_question_bank_id_fkey"
+            columns: ["coding_question_bank_id"]
+            isOneToOne: false
+            referencedRelation: "coding_question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coding_question_bank: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          image_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          image_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coding_question_bank_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth"
             referencedColumns: ["id"]
           },
         ]
@@ -249,6 +363,82 @@ export type Database = {
             columns: ["mcq_question_id"]
             isOneToOne: false
             referencedRelation: "mcq_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_options_bank: {
+        Row: {
+          created_at: string
+          id: string
+          is_correct: boolean
+          mcq_question_bank_id: string
+          order_index: number
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          mcq_question_bank_id: string
+          order_index: number
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          mcq_question_bank_id?: string
+          order_index?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_options_bank_mcq_question_bank_id_fkey"
+            columns: ["mcq_question_bank_id"]
+            isOneToOne: false
+            referencedRelation: "mcq_question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcq_question_bank: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          image_url: string | null
+          marks: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          image_url?: string | null
+          marks?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          marks?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcq_question_bank_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "auth"
             referencedColumns: ["id"]
           },
         ]
@@ -468,9 +658,11 @@ export type Database = {
           assessment_id: string
           completed_at: string | null
           created_at: string
+          face_violations: Json | null
           fullscreen_violations: number | null
           id: string
           is_terminated: boolean | null
+          object_violations: Json | null
           started_at: string
           user_id: string
         }
@@ -478,9 +670,11 @@ export type Database = {
           assessment_id: string
           completed_at?: string | null
           created_at?: string
+          face_violations?: Json | null
           fullscreen_violations?: number | null
           id?: string
           is_terminated?: boolean | null
+          object_violations?: Json | null
           started_at?: string
           user_id: string
         }
@@ -488,9 +682,11 @@ export type Database = {
           assessment_id?: string
           completed_at?: string | null
           created_at?: string
+          face_violations?: Json | null
           fullscreen_violations?: number | null
           id?: string
           is_terminated?: boolean | null
+          object_violations?: Json | null
           started_at?: string
           user_id?: string
         }
@@ -548,6 +744,47 @@ export type Database = {
             columns: ["coding_question_id"]
             isOneToOne: false
             referencedRelation: "coding_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_cases_bank: {
+        Row: {
+          coding_question_bank_id: string
+          created_at: string
+          id: string
+          input: string
+          is_hidden: boolean
+          marks: number
+          order_index: number
+          output: string
+        }
+        Insert: {
+          coding_question_bank_id: string
+          created_at?: string
+          id?: string
+          input: string
+          is_hidden?: boolean
+          marks?: number
+          order_index: number
+          output: string
+        }
+        Update: {
+          coding_question_bank_id?: string
+          created_at?: string
+          id?: string
+          input?: string
+          is_hidden?: boolean
+          marks?: number
+          order_index?: number
+          output?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_cases_bank_coding_question_bank_id_fkey"
+            columns: ["coding_question_bank_id"]
+            isOneToOne: false
+            referencedRelation: "coding_question_bank"
             referencedColumns: ["id"]
           },
         ]
@@ -622,6 +859,10 @@ export type Database = {
       calculate_mcq_question_marks: {
         Args: { question_id: string }
         Returns: number
+      }
+      exec_sql: {
+        Args: { sql_query: string }
+        Returns: undefined
       }
       insert_coding_assessment_question: {
         Args: {

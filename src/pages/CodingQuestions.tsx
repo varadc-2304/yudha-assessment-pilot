@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Code, Plus, Edit, Trash2 } from "lucide-react";
+import { Code, Plus, Edit, Trash2, Database } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,10 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { CodingQuestion } from "@/types/assessment";
 import CreateCodingForm from "@/components/coding/CreateCodingForm";
 import EditCodingForm from "@/components/coding/EditCodingForm";
+import CodingQuestionBankSelector from "@/components/coding/CodingQuestionBankSelector";
 import { useAuth } from "@/contexts/AuthContext";
 
 type DatabaseCodingQuestion = {
@@ -60,6 +66,8 @@ const CodingQuestions: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showBankSelector, setShowBankSelector] = useState(false);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
   // Fetch coding questions with their related data
   const { data: questions, isLoading, error } = useQuery({
@@ -249,10 +257,20 @@ const CodingQuestions: React.FC = () => {
     setShowEditForm(true);
   };
 
+  const handleAddFromBank = (assessmentId: string) => {
+    setSelectedAssessmentId(assessmentId);
+    setShowBankSelector(true);
+  };
+
   const filteredQuestions = questions?.filter((question) =>
     question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
     question.description?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Get unique assessments for the dropdown
+  const uniqueAssessments = Array.from(
+    new Map(questions?.map(q => [q.assessmentId, q.assessment])).entries()
+  ).map(([id, assessment]) => ({ id, ...assessment }));
 
   if (error) {
     return (
@@ -283,14 +301,54 @@ const CodingQuestions: React.FC = () => {
     );
   }
 
+  // If bank selector is shown, render the bank selector component
+  if (showBankSelector && selectedAssessmentId) {
+    return (
+      <CodingQuestionBankSelector 
+        assessmentId={selectedAssessmentId}
+        onCancel={() => {
+          setShowBankSelector(false);
+          setSelectedAssessmentId("");
+        }} 
+      />
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Coding Questions</h1>
-        <Button className="bg-yudha-600 hover:bg-yudha-700" onClick={() => setShowCreateForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Coding Question
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button className="bg-yudha-600 hover:bg-yudha-700">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Question
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setShowCreateForm(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Question
+            </DropdownMenuItem>
+            {uniqueAssessments.length > 0 && (
+              <>
+                <DropdownMenuItem disabled className="text-xs text-gray-500">
+                  Add from Question Bank:
+                </DropdownMenuItem>
+                {uniqueAssessments.map((assessment) => (
+                  <DropdownMenuItem 
+                    key={assessment.id} 
+                    onClick={() => handleAddFromBank(assessment.id)}
+                    className="pl-6"
+                  >
+                    <Database className="mr-2 h-4 w-4" />
+                    {assessment.name} ({assessment.code})
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card className="mb-6">
