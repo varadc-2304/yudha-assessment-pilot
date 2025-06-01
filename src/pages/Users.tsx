@@ -27,7 +27,16 @@ const userSchema = z.object({
   }),
 });
 
+const editUserSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Name is required"),
+  role: z.enum(["student", "admin"], {
+    required_error: "Please select a role",
+  }),
+});
+
 type UserFormData = z.infer<typeof userSchema>;
+type EditUserFormData = z.infer<typeof editUserSchema>;
 
 const Users: React.FC = () => {
   const { user } = useAuth();
@@ -47,8 +56,8 @@ const Users: React.FC = () => {
     },
   });
 
-  const editForm = useForm<Omit<UserFormData, 'password'>>({
-    resolver: zodResolver(userSchema.omit({ password: true })),
+  const editForm = useForm<EditUserFormData>({
+    resolver: zodResolver(editUserSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -176,11 +185,13 @@ const Users: React.FC = () => {
     createUserMutation.mutate(data);
   };
 
-  const handleEditUser = (data: Omit<UserFormData, 'password'>) => {
+  const handleEditUser = (data: EditUserFormData) => {
     if (editingUser) {
       updateUserMutation.mutate({
         id: editingUser.id,
-        ...data,
+        email: data.email,
+        name: data.name,
+        role: data.role,
       });
     }
   };
