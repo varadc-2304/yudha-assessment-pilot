@@ -11,24 +11,24 @@ import { useAuth } from "@/contexts/AuthContext";
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
-  // Query to fetch assessment stats
+  // Query to fetch all assessments in the organization
   const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
-    queryKey: ['all-assessments', user?.id],
+    queryKey: ['organization-assessments', user?.organization],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
-        .eq('created_by', user?.id);
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
-  // Query to fetch results stats for the current admin's assessments
+  // Query to fetch results for all assessments in the organization
   const { data: results, isLoading: isLoadingResults } = useQuery({
-    queryKey: ['all-results', user?.id],
+    queryKey: ['organization-results', user?.organization],
     queryFn: async () => {
       if (!assessments || assessments.length === 0) return [];
       
@@ -85,15 +85,14 @@ const Dashboard: React.FC = () => {
     };
   }, [assessments, results]);
 
-  // Query to fetch recent assessment data
+  // Query to fetch recent assessment data for the organization
   const { data: recentAssessments, isLoading: isLoadingRecent } = useQuery({
-    queryKey: ['recent-assessments', user?.id],
+    queryKey: ['organization-recent-assessments', user?.organization],
     queryFn: async () => {
-      // Fetch the most recent assessments created by this admin
+      // Fetch the most recent assessments in the organization
       const { data: recentAssessments, error: assessmentError } = await supabase
         .from('assessments')
         .select('id, name, code')
-        .eq('created_by', user?.id)
         .order('created_at', { ascending: false })
         .limit(5);
       
@@ -125,7 +124,7 @@ const Dashboard: React.FC = () => {
       
       return assessmentData;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
   // Generate chart data based on recent assessments
@@ -151,7 +150,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6">Organization Dashboard</h1>
       
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
@@ -163,7 +162,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalAssessments}</div>
             <p className="text-xs text-muted-foreground">
-              Assessment templates available
+              Assessment templates in organization
             </p>
           </CardContent>
         </Card>
@@ -176,7 +175,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalSubmissions}</div>
             <p className="text-xs text-muted-foreground">
-              Across all assessments
+              Across all organization assessments
             </p>
           </CardContent>
         </Card>
@@ -189,7 +188,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.averageScore}%</div>
             <p className="text-xs text-muted-foreground">
-              Mean score percentage
+              Organization-wide mean score
             </p>
           </CardContent>
         </Card>
@@ -202,7 +201,7 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <div className="text-2xl font-bold">{stats.passRate}%</div>
             <p className="text-xs text-muted-foreground">
-              Assessment completion rate
+              Organization completion rate
             </p>
           </CardContent>
         </Card>
@@ -213,7 +212,7 @@ const Dashboard: React.FC = () => {
         <CardHeader>
           <CardTitle>Assessment Analytics</CardTitle>
           <CardDescription>
-            Submissions and average scores by assessment
+            Submissions and average scores by assessment (organization-wide)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -253,7 +252,7 @@ const Dashboard: React.FC = () => {
         <CardHeader>
           <CardTitle>Recent Assessments</CardTitle>
           <CardDescription>
-            Latest assessment performance data
+            Latest assessment performance data (organization-wide)
           </CardDescription>
         </CardHeader>
         <CardContent>
