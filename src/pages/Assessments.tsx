@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye, BarChart } from "lucide-react";
@@ -32,38 +31,24 @@ const Assessments: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch assessments from Supabase - only those created by the current admin
+  // Fetch assessments from Supabase - all assessments within the organization
   const { data: assessments, isLoading, error } = useQuery({
-    queryKey: ['assessments', user?.id],
+    queryKey: ['assessments', user?.organization],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
-        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Assessment[];
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
   // Delete assessment mutation
   const deleteAssessmentMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Verify this assessment belongs to the current admin
-      const { data: assessmentCheck, error: checkError } = await supabase
-        .from('assessments')
-        .select('created_by')
-        .eq('id', id)
-        .single();
-      
-      if (checkError) throw checkError;
-      
-      if (assessmentCheck.created_by !== user?.id) {
-        throw new Error("You don't have permission to delete this assessment");
-      }
-      
       const { error } = await supabase
         .from('assessments')
         .delete()
@@ -94,19 +79,6 @@ const Assessments: React.FC = () => {
   const updateAssessmentMutation = useMutation({
     mutationFn: async (data: { id: string; assessment: Partial<Assessment> }) => {
       const { id, assessment } = data;
-      
-      // Verify this assessment belongs to the current admin
-      const { data: assessmentCheck, error: checkError } = await supabase
-        .from('assessments')
-        .select('created_by')
-        .eq('id', id)
-        .single();
-      
-      if (checkError) throw checkError;
-      
-      if (assessmentCheck.created_by !== user?.id) {
-        throw new Error("You don't have permission to update this assessment");
-      }
       
       const { error } = await supabase
         .from('assessments')

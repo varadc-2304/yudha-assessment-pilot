@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,14 +24,13 @@ const MCQQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel }) =>
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestionBank | null>(null);
   const [orderIndex, setOrderIndex] = useState<number>(1);
 
-  // Fetch MCQ questions from bank
+  // Fetch MCQ questions from bank - now includes all organization questions
   const { data: bankQuestions, isLoading } = useQuery({
-    queryKey: ['mcq-question-bank', user?.id],
+    queryKey: ['mcq-question-bank', user?.organization],
     queryFn: async () => {
       const { data: questions, error } = await supabase
         .from('mcq_question_bank')
         .select('*')
-        .eq('created_by', user?.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -58,7 +56,7 @@ const MCQQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel }) =>
 
       return questionsWithOptions;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
   // Add question from bank to assessment

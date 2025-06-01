@@ -56,23 +56,22 @@ const MCQQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
-  // Fetch MCQ questions with their options
+  // Fetch MCQ questions with their options - now includes all organization assessments
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['mcq-questions', user?.id],
+    queryKey: ['mcq-questions', user?.organization],
     queryFn: async () => {
-      // First, get the assessments created by this admin
-      const { data: adminAssessments, error: assessmentsError } = await supabase
+      // Get all assessments in the organization
+      const { data: orgAssessments, error: assessmentsError } = await supabase
         .from('assessments')
-        .select('id')
-        .eq('created_by', user?.id);
+        .select('id');
       
       if (assessmentsError) throw assessmentsError;
       
-      if (!adminAssessments || adminAssessments.length === 0) {
-        return []; // No assessments created by this admin
+      if (!orgAssessments || orgAssessments.length === 0) {
+        return [];
       }
       
-      const assessmentIds = adminAssessments.map(a => a.id);
+      const assessmentIds = orgAssessments.map(a => a.id);
       
       // Now get MCQ questions for these assessments
       const { data: mcqQuestions, error: questionsError } = await supabase
@@ -84,7 +83,7 @@ const MCQQuestions: React.FC = () => {
       if (questionsError) throw questionsError;
       
       if (!mcqQuestions || mcqQuestions.length === 0) {
-        return []; // No MCQ questions for this admin's assessments
+        return [];
       }
 
       // For each question, fetch its options
@@ -133,35 +132,12 @@ const MCQQuestions: React.FC = () => {
         }))
       }));
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
   // Delete MCQ question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Check if this question belongs to an assessment created by this admin
-      const { data: question, error: questionError } = await supabase
-        .from('mcq_questions')
-        .select('assessment_id')
-        .eq('id', id)
-        .single();
-      
-      if (questionError) throw questionError;
-      
-      // Verify assessment ownership
-      const { data: assessment, error: assessmentError } = await supabase
-        .from('assessments')
-        .select('created_by')
-        .eq('id', question.assessment_id)
-        .single();
-      
-      if (assessmentError) throw assessmentError;
-      
-      if (assessment.created_by !== user?.id) {
-        throw new Error("You don't have permission to delete this question");
-      }
-      
-      // Delete the MCQ question (cascade will delete options)
       const { error } = await supabase
         .from('mcq_questions')
         .delete()

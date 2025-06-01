@@ -67,43 +67,37 @@ export type Database = {
       }
       auth: {
         Row: {
-          batch: string | null
           created_at: string
           department: string | null
-          division: string | null
           email: string
           id: string
           name: string | null
+          organization: string | null
           password: string
           prn: string | null
           role: string
-          year: string | null
         }
         Insert: {
-          batch?: string | null
           created_at?: string
           department?: string | null
-          division?: string | null
           email: string
           id?: string
           name?: string | null
+          organization?: string | null
           password: string
           prn?: string | null
           role?: string
-          year?: string | null
         }
         Update: {
-          batch?: string | null
           created_at?: string
           department?: string | null
-          division?: string | null
           email?: string
           id?: string
           name?: string | null
+          organization?: string | null
           password?: string
           prn?: string | null
           role?: string
-          year?: string | null
         }
         Relationships: []
       }
