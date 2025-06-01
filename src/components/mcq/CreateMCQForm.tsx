@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +15,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import AIQuestionGenerator from './AIQuestionGenerator';
 
 const mcqFormSchema = z.object({
   title: z.string().min(3, { message: 'Question title must be at least 3 characters long' }),
@@ -31,6 +31,15 @@ interface Option {
   id: string;
   text: string;
   isCorrect: boolean;
+}
+
+interface GeneratedQuestion {
+  question: string;
+  description?: string;
+  options: Array<{
+    text: string;
+    isCorrect: boolean;
+  }>;
 }
 
 const CreateMCQForm = () => {
@@ -115,6 +124,23 @@ const CreateMCQForm = () => {
     }
   });
 
+  const handleAIQuestionGenerated = (generatedQuestion: GeneratedQuestion) => {
+    // Fill in the form with generated data
+    form.setValue('title', generatedQuestion.question);
+    if (generatedQuestion.description) {
+      form.setValue('description', generatedQuestion.description);
+    }
+
+    // Replace options with generated ones
+    const newOptions = generatedQuestion.options.map((option, index) => ({
+      id: crypto.randomUUID(),
+      text: option.text,
+      isCorrect: option.isCorrect
+    }));
+    
+    setOptions(newOptions);
+  };
+
   const onSubmit = (values: MCQFormValues) => {
     // Validate that at least one option is marked as correct
     if (!options.some(option => option.isCorrect)) {
@@ -179,6 +205,10 @@ const CreateMCQForm = () => {
         <CardTitle>Create MCQ Question</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-6">
+          <AIQuestionGenerator onQuestionGenerated={handleAIQuestionGenerated} />
+        </div>
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
