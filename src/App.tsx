@@ -13,6 +13,7 @@ import MCQQuestions from "./pages/MCQQuestions";
 import CodingQuestions from "./pages/CodingQuestions";
 import Results from "./pages/Results";
 import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import CreateAssessment from "./pages/CreateAssessment";
 import NotFound from "./pages/NotFound";
 import CreateMCQForm from "./components/mcq/CreateMCQForm";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/create-coding-question" element={<ProtectedRoute><DashboardLayout><CreateCodingForm /></DashboardLayout></ProtectedRoute>} />
             <Route path="/results" element={<ProtectedRoute><DashboardLayout><Results /></DashboardLayout></ProtectedRoute>} />
             <Route path="/results/:assessmentId" element={<ProtectedRoute><DashboardLayout><Results /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><DashboardLayout><Users /></DashboardLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><DashboardLayout><Settings /></DashboardLayout></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

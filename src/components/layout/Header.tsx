@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { User, LayoutDashboard, FileText, CheckSquare, Code, BarChart, Settings } from "lucide-react";
+import { User, LayoutDashboard, FileText, CheckSquare, Code, BarChart, Settings, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,6 +47,11 @@ const navItems = [
     title: "Results",
     icon: BarChart,
     href: "/results",
+  },
+  {
+    title: "Users",
+    icon: Users,
+    href: "/users",
   },
 ];
 
