@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -131,8 +132,7 @@ const Results: React.FC = () => {
   const filteredResults = results?.filter(result => 
     result.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (result.userEmail && result.userEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (result.userPrn && result.userPrn.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (result.userDepartment && result.userDepartment.toLowerCase().includes(searchTerm.toLowerCase()))
+    (result.userPrn && result.userPrn.toLowerCase().includes(searchTerm.toLowerCase()))
   ) || [];
 
   // Calculate statistics for the results
@@ -342,7 +342,7 @@ const Results: React.FC = () => {
           <CardTitle>Individual Results</CardTitle>
           <div className="pt-3">
             <Input
-              placeholder="Search by name, email, PRN, or department..."
+              placeholder="Search by name, email, or PRN..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -357,9 +357,9 @@ const Results: React.FC = () => {
                   {!assessmentId && (
                     <th className="text-left py-3 px-4">Assessment</th>
                   )}
-                  <th className="text-center py-3 px-4">Department</th>
                   <th className="text-center py-3 px-4">Score</th>
                   <th className="text-center py-3 px-4">Status</th>
+                  <th className="text-center py-3 px-4">Cheating</th>
                   <th className="text-center py-3 px-4">Submitted At</th>
                 </tr>
               </thead>
@@ -386,9 +386,6 @@ const Results: React.FC = () => {
                         </td>
                       )}
                       <td className="py-3 px-4 text-center">
-                        {result.userDepartment || 'N/A'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
                         {result.percentage}% ({result.total_score}/{result.total_marks})
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -397,8 +394,12 @@ const Results: React.FC = () => {
                         ) : (
                           <Badge variant="outline" className="text-red-500 border-red-200 hover:bg-red-50">Failed</Badge>
                         )}
-                        {result.is_cheated && (
-                          <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800">Flagged</Badge>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {result.is_cheated ? (
+                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Flagged</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Clean</Badge>
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">{formatDate(result.completed_at)}</td>

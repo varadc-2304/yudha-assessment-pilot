@@ -69,6 +69,22 @@ const CodingQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
+  // Fetch all organization assessments for dropdown
+  const { data: orgAssessments } = useQuery({
+    queryKey: ['org-assessments-for-questions', user?.organization],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, name, code, created_by')
+        .eq('created_by', user?.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin'
+  });
+
   // Fetch coding questions with their related data
   const { data: questions, isLoading, error } = useQuery({
     queryKey: ['coding-questions', user?.id],
@@ -330,12 +346,12 @@ const CodingQuestions: React.FC = () => {
               <Plus className="mr-2 h-4 w-4" />
               Create New Question
             </DropdownMenuItem>
-            {uniqueAssessments.length > 0 && (
+            {orgAssessments && orgAssessments.length > 0 && (
               <>
                 <DropdownMenuItem disabled className="text-xs text-gray-500">
                   Add from Question Bank:
                 </DropdownMenuItem>
-                {uniqueAssessments.map((assessment) => (
+                {orgAssessments.map((assessment) => (
                   <DropdownMenuItem 
                     key={assessment.id} 
                     onClick={() => handleAddFromBank(assessment.id)}

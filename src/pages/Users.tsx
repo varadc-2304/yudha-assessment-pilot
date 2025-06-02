@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -399,8 +398,6 @@ const Users: React.FC = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>PRN</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -419,8 +416,6 @@ const Users: React.FC = () => {
                           {userData.role}
                         </span>
                       </TableCell>
-                      <TableCell>{userData.department || '-'}</TableCell>
-                      <TableCell>{userData.prn || '-'}</TableCell>
                       <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
