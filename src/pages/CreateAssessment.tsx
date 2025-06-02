@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import AssessmentConstraints from "@/components/assessment/AssessmentConstraints";
 
 const assessmentSchema = z.object({
   name: z.string().min(3, { message: "Assessment name must be at least 3 characters" }),
@@ -22,15 +23,25 @@ const assessmentSchema = z.object({
   start_time: z.string().min(1, { message: "Start time is required" }),
   end_time: z.string().optional(),
   is_practice: z.boolean().default(false),
+  is_dynamic: z.boolean().default(false),
   reattempt: z.boolean().default(false)
 });
 
 type AssessmentFormValues = z.infer<typeof assessmentSchema>;
 
+interface AssessmentConstraint {
+  id?: string;
+  topic: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  question_type: 'mcq' | 'coding';
+  number_of_questions: number;
+}
+
 const CreateAssessment: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [constraints, setConstraints] = useState<AssessmentConstraint[]>([]);
 
   const form = useForm<AssessmentFormValues>({
     resolver: zodResolver(assessmentSchema),
@@ -42,12 +53,25 @@ const CreateAssessment: React.FC = () => {
       start_time: new Date().toISOString().slice(0, 16),
       end_time: "",
       is_practice: false,
+      is_dynamic: false,
       reattempt: false
     }
   });
 
+  const isDynamic = form.watch("is_dynamic");
+
   const onSubmit = async (values: AssessmentFormValues) => {
     try {
+      // Validate constraints if dynamic assessment
+      if (values.is_dynamic && constraints.length === 0) {
+        toast({
+          title: "Error",
+          description: "Dynamic assessments must have at least one constraint",
+          variant: "destructive"
+        });
+        return;
+      }
+
       // Convert form timestamps to proper ISO format
       const startTime = new Date(values.start_time).toISOString();
       const endTime = values.end_time ? new Date(values.end_time).toISOString() : null;
@@ -62,12 +86,31 @@ const CreateAssessment: React.FC = () => {
           start_time: startTime,
           end_time: endTime,
           is_practice: values.is_practice,
+          is_dynamic: values.is_dynamic,
           reattempt: values.reattempt,
           created_by: null // Will be replaced with actual user ID when auth is implemented
         })
-        .select();
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Insert constraints if dynamic assessment
+      if (values.is_dynamic && constraints.length > 0) {
+        const constraintsToInsert = constraints.map(constraint => ({
+          assessment_id: data.id,
+          topic: constraint.topic,
+          difficulty: constraint.difficulty,
+          question_type: constraint.question_type,
+          number_of_questions: constraint.number_of_questions
+        }));
+
+        const { error: constraintsError } = await supabase
+          .from('assessment_constraints')
+          .insert(constraintsToInsert);
+
+        if (constraintsError) throw constraintsError;
+      }
 
       toast({
         title: "Assessment Created",
@@ -194,7 +237,7 @@ const CreateAssessment: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="is_practice"
@@ -204,6 +247,27 @@ const CreateAssessment: React.FC = () => {
                         <FormLabel>Practice Assessment</FormLabel>
                         <p className="text-sm text-muted-foreground">
                           Mark as a practice assessment (doesn't count towards grades)
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="is_dynamic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Dynamic Assessment</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Generate questions dynamically based on constraints
                         </p>
                       </div>
                       <FormControl>
@@ -237,6 +301,15 @@ const CreateAssessment: React.FC = () => {
                   )}
                 />
               </div>
+
+              {/* Dynamic Assessment Constraints */}
+              {isDynamic && (
+                <AssessmentConstraints
+                  constraints={constraints}
+                  onChange={setConstraints}
+                  disabled={!isDynamic}
+                />
+              )}
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button 

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Assessment } from "@/types/assessment";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import AssessmentConstraints from "./AssessmentConstraints";
+
+interface AssessmentConstraint {
+  id?: string;
+  topic: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  question_type: 'mcq' | 'coding';
+  number_of_questions: number;
+}
 
 interface EditAssessmentFormProps {
   assessment: Assessment;
@@ -22,6 +33,10 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
   onCancel,
   isSubmitting
 }) => {
+  const { toast } = useToast();
+  const [constraints, setConstraints] = useState<AssessmentConstraint[]>([]);
+  const [loadingConstraints, setLoadingConstraints] = useState(false);
+
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
     defaultValues: {
       name: assessment.name,
@@ -31,24 +46,115 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
       start_time: assessment.start_time ? format(new Date(assessment.start_time), "yyyy-MM-dd'T'HH:mm") : "",
       end_time: assessment.end_time ? format(new Date(assessment.end_time), "yyyy-MM-dd'T'HH:mm") : "",
       is_practice: assessment.is_practice,
+      is_dynamic: assessment.is_dynamic || false,
       reattempt: assessment.reattempt
     }
   });
 
+  const isDynamic = watch("is_dynamic");
+
+  // Load existing constraints when component mounts or when dynamic toggle changes
+  useEffect(() => {
+    const loadConstraints = async () => {
+      if (!assessment.is_dynamic) return;
+      
+      setLoadingConstraints(true);
+      try {
+        const { data, error } = await supabase
+          .from('assessment_constraints')
+          .select('*')
+          .eq('assessment_id', assessment.id);
+
+        if (error) throw error;
+        setConstraints(data || []);
+      } catch (error: any) {
+        console.error('Error loading constraints:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load assessment constraints",
+          variant: "destructive"
+        });
+      } finally {
+        setLoadingConstraints(false);
+      }
+    };
+
+    loadConstraints();
+  }, [assessment.id, assessment.is_dynamic, toast]);
+
   // Initialize checkbox states
   React.useEffect(() => {
     setValue("is_practice", assessment.is_practice);
+    setValue("is_dynamic", assessment.is_dynamic || false);
     setValue("reattempt", assessment.reattempt);
   }, [assessment, setValue]);
 
-  const onSubmit = (data: any) => {
-    // Format dates for submission
-    const formattedData = {
-      ...data,
-      start_time: new Date(data.start_time).toISOString(),
-      end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
-    };
-    onUpdate(formattedData);
+  const onSubmit = async (data: any) => {
+    try {
+      // Validate constraints if dynamic assessment
+      if (data.is_dynamic && constraints.length === 0) {
+        toast({
+          title: "Error",
+          description: "Dynamic assessments must have at least one constraint",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Format dates for submission
+      const formattedData = {
+        ...data,
+        start_time: new Date(data.start_time).toISOString(),
+        end_time: data.end_time ? new Date(data.end_time).toISOString() : null,
+      };
+
+      // Update assessment
+      await onUpdate(formattedData);
+
+      // Handle constraints if dynamic assessment
+      if (data.is_dynamic) {
+        // Delete existing constraints
+        const { error: deleteError } = await supabase
+          .from('assessment_constraints')
+          .delete()
+          .eq('assessment_id', assessment.id);
+
+        if (deleteError) throw deleteError;
+
+        // Insert new constraints
+        if (constraints.length > 0) {
+          const constraintsToInsert = constraints.map(constraint => ({
+            assessment_id: assessment.id,
+            topic: constraint.topic,
+            difficulty: constraint.difficulty,
+            question_type: constraint.question_type,
+            number_of_questions: constraint.number_of_questions
+          }));
+
+          const { error: insertError } = await supabase
+            .from('assessment_constraints')
+            .insert(constraintsToInsert);
+
+          if (insertError) throw insertError;
+        }
+      } else {
+        // If not dynamic, remove all constraints
+        const { error: deleteError } = await supabase
+          .from('assessment_constraints')
+          .delete()
+          .eq('assessment_id', assessment.id);
+
+        if (deleteError) throw deleteError;
+      }
+
+    } catch (error: any) {
+      console.error('Error updating assessment:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update assessment",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -134,7 +240,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
           <Checkbox 
             id="is_practice"
@@ -147,6 +253,16 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
 
         <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
           <Checkbox 
+            id="is_dynamic"
+            checked={watch("is_dynamic")}
+            onCheckedChange={(checked) => setValue("is_dynamic", !!checked)}
+            className="h-5 w-5 border-gray-300 text-purple-600 focus:ring-purple-500"
+          />
+          <Label htmlFor="is_dynamic" className="cursor-pointer font-medium">Dynamic Assessment</Label>
+        </div>
+
+        <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+          <Checkbox 
             id="reattempt"
             checked={watch("reattempt")}
             onCheckedChange={(checked) => setValue("reattempt", !!checked)}
@@ -155,6 +271,21 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
           <Label htmlFor="reattempt" className="cursor-pointer font-medium">Allow Reattempt</Label>
         </div>
       </div>
+
+      {/* Dynamic Assessment Constraints */}
+      {isDynamic && (
+        <div className="pt-4">
+          {loadingConstraints ? (
+            <div className="text-center py-4">Loading constraints...</div>
+          ) : (
+            <AssessmentConstraints
+              constraints={constraints}
+              onChange={setConstraints}
+              disabled={!isDynamic}
+            />
+          )}
+        </div>
+      )}
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button 
