@@ -27,6 +27,18 @@ interface EditAssessmentFormProps {
   isSubmitting: boolean;
 }
 
+interface FormData {
+  name: string;
+  code: string;
+  instructions: string;
+  duration_minutes: number;
+  start_time: string;
+  end_time: string;
+  is_practice: boolean;
+  is_dynamic: boolean;
+  reattempt: boolean;
+}
+
 const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
   assessment,
   onUpdate,
@@ -37,7 +49,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
   const [constraints, setConstraints] = useState<AssessmentConstraint[]>([]);
   const [loadingConstraints, setLoadingConstraints] = useState(false);
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>({
     defaultValues: {
       name: assessment.name,
       code: assessment.code,
@@ -66,7 +78,17 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
           .eq('assessment_id', assessment.id);
 
         if (error) throw error;
-        setConstraints(data || []);
+        
+        // Type the data properly for our local constraint interface
+        const typedConstraints: AssessmentConstraint[] = (data || []).map(item => ({
+          id: item.id,
+          topic: item.topic,
+          difficulty: item.difficulty as 'easy' | 'medium' | 'hard',
+          question_type: item.question_type as 'mcq' | 'coding',
+          number_of_questions: item.number_of_questions
+        }));
+        
+        setConstraints(typedConstraints);
       } catch (error: any) {
         console.error('Error loading constraints:', error);
         toast({
@@ -89,7 +111,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
     setValue("reattempt", assessment.reattempt);
   }, [assessment, setValue]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FormData) => {
     try {
       // Validate constraints if dynamic assessment
       if (data.is_dynamic && constraints.length === 0) {

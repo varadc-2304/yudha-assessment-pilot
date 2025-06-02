@@ -17,6 +17,7 @@ export interface Assessment {
   created_at: string;
   updated_at?: string;
   is_practice: boolean;
+  is_dynamic?: boolean;
   reattempt: boolean;
   status?: string;
   created_by?: string | null;
