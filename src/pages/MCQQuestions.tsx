@@ -56,14 +56,62 @@ const MCQQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
+  // Fetch all organization assessments for dropdown - now includes all organization admins
+  const { data: orgAssessments } = useQuery({
+    queryKey: ['org-assessments-for-questions', user?.organization],
+    queryFn: async () => {
+      // Get all users with admin role in the same organization
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('organization', user?.organization);
+      
+      if (adminError) throw adminError;
+      
+      if (!adminUsers || adminUsers.length === 0) {
+        return [];
+      }
+      
+      const adminIds = adminUsers.map(admin => admin.id);
+      
+      // Get assessments created by any admin in the organization
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, name, code, created_by')
+        .in('created_by', adminIds)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+  });
+
   // Fetch MCQ questions with their options - now includes all organization assessments
   const { data: questions, isLoading, error } = useQuery({
     queryKey: ['mcq-questions', user?.organization],
     queryFn: async () => {
-      // Get all assessments in the organization
+      // Get all users with admin role in the same organization
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('organization', user?.organization);
+      
+      if (adminError) throw adminError;
+      
+      if (!adminUsers || adminUsers.length === 0) {
+        return [];
+      }
+      
+      const adminIds = adminUsers.map(admin => admin.id);
+      
+      // Get all assessments created by admins in the organization
       const { data: orgAssessments, error: assessmentsError } = await supabase
         .from('assessments')
-        .select('id');
+        .select('id')
+        .in('created_by', adminIds);
       
       if (assessmentsError) throw assessmentsError;
       
@@ -132,7 +180,7 @@ const MCQQuestions: React.FC = () => {
         }))
       }));
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
 
   // Delete MCQ question mutation
@@ -250,12 +298,12 @@ const MCQQuestions: React.FC = () => {
               <Plus className="mr-2 h-4 w-4" />
               Create New Question
             </DropdownMenuItem>
-            {uniqueAssessments.length > 0 && (
+            {orgAssessments && orgAssessments.length > 0 && (
               <>
                 <DropdownMenuItem disabled className="text-xs text-gray-500">
                   Add from Question Bank:
                 </DropdownMenuItem>
-                {uniqueAssessments.map((assessment) => (
+                {orgAssessments.map((assessment) => (
                   <DropdownMenuItem 
                     key={assessment.id} 
                     onClick={() => handleAddFromBank(assessment.id)}

@@ -24,13 +24,30 @@ const MCQQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel }) =>
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestionBank | null>(null);
   const [orderIndex, setOrderIndex] = useState<number>(1);
 
-  // Fetch MCQ questions from bank - now includes all organization questions
+  // Fetch MCQ questions from bank - now includes questions created by all organization admins
   const { data: bankQuestions, isLoading } = useQuery({
     queryKey: ['mcq-question-bank', user?.organization],
     queryFn: async () => {
+      // Get all users with admin role in the same organization
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('organization', user?.organization);
+
+      if (adminError) throw adminError;
+
+      if (!adminUsers || adminUsers.length === 0) {
+        return [];
+      }
+
+      const adminIds = adminUsers.map(admin => admin.id);
+
+      // Get questions created by any admin in the organization
       const { data: questions, error } = await supabase
         .from('mcq_question_bank')
         .select('*')
+        .in('created_by', adminIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -56,7 +73,7 @@ const MCQQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel }) =>
 
       return questionsWithOptions;
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
 
   // Add question from bank to assessment

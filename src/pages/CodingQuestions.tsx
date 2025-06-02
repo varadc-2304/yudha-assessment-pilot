@@ -69,36 +69,67 @@ const CodingQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
-  // Fetch all organization assessments for dropdown
+  // Fetch all organization assessments for dropdown - now includes all organization admins
   const { data: orgAssessments } = useQuery({
     queryKey: ['org-assessments-for-questions', user?.organization],
     queryFn: async () => {
+      // Get all users with admin role in the same organization
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('organization', user?.organization);
+      
+      if (adminError) throw adminError;
+      
+      if (!adminUsers || adminUsers.length === 0) {
+        return [];
+      }
+      
+      const adminIds = adminUsers.map(admin => admin.id);
+      
+      // Get assessments created by any admin in the organization
       const { data, error } = await supabase
         .from('assessments')
         .select('id, name, code, created_by')
-        .eq('created_by', user?.id)
+        .in('created_by', adminIds)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
 
-  // Fetch coding questions with their related data
+  // Fetch coding questions with their related data - now includes all organization assessments
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['coding-questions', user?.id],
+    queryKey: ['coding-questions', user?.organization],
     queryFn: async () => {
-      // First, get the assessments created by this admin
+      // Get all users with admin role in the same organization
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('organization', user?.organization);
+      
+      if (adminError) throw adminError;
+      
+      if (!adminUsers || adminUsers.length === 0) {
+        return [];
+      }
+      
+      const adminIds = adminUsers.map(admin => admin.id);
+      
+      // First, get the assessments created by admins in this organization
       const { data: adminAssessments, error: assessmentsError } = await supabase
         .from('assessments')
         .select('id')
-        .eq('created_by', user?.id);
+        .in('created_by', adminIds);
       
       if (assessmentsError) throw assessmentsError;
       
       if (!adminAssessments || adminAssessments.length === 0) {
-        return []; // No assessments created by this admin
+        return []; // No assessments created by organization admins
       }
       
       const assessmentIds = adminAssessments.map(a => a.id);
@@ -113,7 +144,7 @@ const CodingQuestions: React.FC = () => {
       if (questionsError) throw questionsError;
       
       if (!codingQuestions || codingQuestions.length === 0) {
-        return []; // No coding questions for this admin's assessments
+        return []; // No coding questions for this organization's assessments
       }
 
       // For each question, fetch its related data
@@ -205,13 +236,13 @@ const CodingQuestions: React.FC = () => {
         };
       });
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
 
   // Delete coding question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Check if this question belongs to an assessment created by this admin
+      // Check if this question belongs to an assessment created by an admin in this organization
       const { data: question, error: questionError } = await supabase
         .from('coding_questions')
         .select('assessment_id')
@@ -220,7 +251,7 @@ const CodingQuestions: React.FC = () => {
       
       if (questionError) throw questionError;
       
-      // Verify assessment ownership
+      // Verify assessment ownership within organization
       const { data: assessment, error: assessmentError } = await supabase
         .from('assessments')
         .select('created_by')
@@ -229,7 +260,16 @@ const CodingQuestions: React.FC = () => {
       
       if (assessmentError) throw assessmentError;
       
-      if (assessment.created_by !== user?.id) {
+      // Check if the assessment creator is an admin in the same organization
+      const { data: creator, error: creatorError } = await supabase
+        .from('auth')
+        .select('role, organization')
+        .eq('id', assessment.created_by)
+        .single();
+      
+      if (creatorError) throw creatorError;
+      
+      if (creator.role !== 'admin' || creator.organization !== user?.organization) {
         throw new Error("You don't have permission to delete this question");
       }
       
