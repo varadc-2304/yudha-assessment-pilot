@@ -14,6 +14,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import AICodingQuestionGenerator from './AICodingQuestionGenerator';
 
 const codingFormSchema = z.object({
   title: z.string().min(3, { message: 'Question title must be at least 3 characters long' }),
@@ -352,12 +353,62 @@ const CreateCodingForm = () => {
     window.location.href = "/coding-questions";
   };
 
+  const handleAIGenerated = (generatedQuestion: any) => {
+    // Fill the form with generated data
+    form.setValue('title', generatedQuestion.title);
+    form.setValue('description', generatedQuestion.description);
+
+    // Set language options with generated templates
+    const newLanguageOptions = [
+      { id: crypto.randomUUID(), languageType: "c" as const, solutionTemplate: generatedQuestion.solutionTemplates.c },
+      { id: crypto.randomUUID(), languageType: "cpp" as const, solutionTemplate: generatedQuestion.solutionTemplates.cpp },
+      { id: crypto.randomUUID(), languageType: "java" as const, solutionTemplate: generatedQuestion.solutionTemplates.java },
+      { id: crypto.randomUUID(), languageType: "python" as const, solutionTemplate: generatedQuestion.solutionTemplates.python }
+    ];
+    setLanguageOptions(newLanguageOptions);
+
+    // Set examples
+    const newExamples = generatedQuestion.examples.map((example: any, index: number) => ({
+      id: crypto.randomUUID(),
+      input: example.input,
+      output: example.output,
+      explanation: example.explanation,
+      order_index: index
+    }));
+    setExamples(newExamples);
+
+    // Set test cases (visible and hidden)
+    const newTestCases = [
+      ...generatedQuestion.testCases.visible.map((testCase: any, index: number) => ({
+        id: crypto.randomUUID(),
+        input: testCase.input,
+        output: testCase.output,
+        marks: testCase.marks,
+        is_hidden: false,
+        order_index: index
+      })),
+      ...generatedQuestion.testCases.hidden.map((testCase: any, index: number) => ({
+        id: crypto.randomUUID(),
+        input: testCase.input,
+        output: testCase.output,
+        marks: testCase.marks,
+        is_hidden: true,
+        order_index: index + generatedQuestion.testCases.visible.length
+      }))
+    ];
+    setTestCases(newTestCases);
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Create Coding Question</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-6">
+          <AICodingQuestionGenerator onQuestionGenerated={handleAIGenerated} />
+        </div>
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField

@@ -35,3 +35,6 @@ port = 54325
 
 [functions.generate-mcq-question]
 verify_jwt = false
+
+[functions.generate-coding-question]
+verify_jwt = false
