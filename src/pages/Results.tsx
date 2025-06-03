@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,6 +22,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AssessmentResult } from "@/types/assessment";
 import { useAuth } from "@/contexts/AuthContext";
+import { Bot } from "lucide-react";
+import AskAIDialog from "@/components/results/AskAIDialog";
 
 const COLORS = ["#8884d8", "#FF8042"];
 const PASS_THRESHOLD = 60; // Assuming 60% is passing
@@ -30,6 +31,7 @@ const PASS_THRESHOLD = 60; // Assuming 60% is passing
 const Results: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId?: string }>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [askAIOpen, setAskAIOpen] = useState(false);
   const { user } = useAuth();
 
   // First, fetch all assessments in the organization
@@ -38,10 +40,10 @@ const Results: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assessments')
-        .select('id');
+        .select('id, name, code');
       
       if (error) throw error;
-      return data.map(a => a.id);
+      return data;
     },
     enabled: !!user?.id && user?.role === 'admin'
   });
@@ -232,11 +234,21 @@ const Results: React.FC = () => {
             : "All Results"
           }
         </h1>
-        {assessmentId && (
-          <Button variant="outline" asChild>
-            <Link to="/results">View All Results</Link>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setAskAIOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Bot className="h-4 w-4" />
+            Ask AI
           </Button>
-        )}
+          {assessmentId && (
+            <Button variant="outline" asChild>
+              <Link to="/results">View All Results</Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -417,6 +429,15 @@ const Results: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <AskAIDialog
+        open={askAIOpen}
+        onOpenChange={setAskAIOpen}
+        assessmentId={assessmentId}
+        assessmentName={assessmentDetails?.name}
+        allAssessments={orgAssessments}
+        resultsData={filteredResults}
+      />
     </div>
   );
 };
