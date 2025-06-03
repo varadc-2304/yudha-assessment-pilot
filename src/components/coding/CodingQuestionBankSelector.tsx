@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, Filter } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Badge } from '@/components/ui/badge';
 import { CodingQuestionBank } from '@/types/questionBank';
@@ -24,6 +26,8 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState<CodingQuestionBank | null>(null);
   const [orderIndex, setOrderIndex] = useState<number>(1);
+  const [selectedTopic, setSelectedTopic] = useState<string>('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
 
   // Fetch coding questions from bank - now includes questions created by all organization admins
   const { data: bankQuestions, isLoading } = useQuery({
@@ -96,6 +100,19 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
     },
     enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
+
+  // Get unique topics and difficulties for filter options
+  const topics = React.useMemo(() => {
+    if (!bankQuestions) return [];
+    const uniqueTopics = [...new Set(bankQuestions.map(q => q.topic).filter(Boolean))];
+    return uniqueTopics.sort();
+  }, [bankQuestions]);
+
+  const difficulties = React.useMemo(() => {
+    if (!bankQuestions) return [];
+    const uniqueDifficulties = [...new Set(bankQuestions.map(q => q.difficulty).filter(Boolean))];
+    return uniqueDifficulties.sort();
+  }, [bankQuestions]);
 
   // Add question from bank to assessment
   const addFromBankMutation = useMutation({
@@ -192,10 +209,15 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
     }
   });
 
-  const filteredQuestions = bankQuestions?.filter(question =>
-    question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.description.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredQuestions = bankQuestions?.filter(question => {
+    const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesTopic = selectedTopic === 'all' || question.topic === selectedTopic;
+    const matchesDifficulty = selectedDifficulty === 'all' || question.difficulty === selectedDifficulty;
+    
+    return matchesSearch && matchesTopic && matchesDifficulty;
+  }) || [];
 
   const handleAddQuestion = () => {
     if (selectedQuestion && orderIndex) {
@@ -231,6 +253,36 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
             />
           </div>
 
+          {/* Filters */}
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-gray-400" />
+            <Select value={selectedTopic} onValueChange={setSelectedTopic}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by topic" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Topics</SelectItem>
+                {topics.map((topic) => (
+                  <SelectItem key={topic} value={topic}>{topic}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={selectedDifficulty} onValueChange={setSelectedDifficulty}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by difficulty" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Difficulties</SelectItem>
+                {difficulties.map((difficulty) => (
+                  <SelectItem key={difficulty} value={difficulty}>
+                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {isLoading ? (
             <div className="flex justify-center py-8">
               <LoadingSpinner size="lg" />
@@ -259,6 +311,16 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
                                 </Badge>
                               ))}
                             </div>
+                            {question.topic && (
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                {question.topic}
+                              </span>
+                            )}
+                            {question.difficulty && (
+                              <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                                {question.difficulty}
+                              </span>
+                            )}
                             <span className="bg-yudha-100 text-yudha-800 text-xs px-2 py-1 rounded">
                               {totalMarks} marks
                             </span>
@@ -297,7 +359,7 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
                 })
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No coding questions found in the bank.</p>
+                  <p className="text-gray-500">No coding questions found matching the selected filters.</p>
                 </div>
               )}
             </div>
