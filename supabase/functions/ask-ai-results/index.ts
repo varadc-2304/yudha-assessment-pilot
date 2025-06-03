@@ -69,7 +69,7 @@ serve(async (req) => {
       }))
     };
 
-    const systemPrompt = `You are an AI assistant specialized in analyzing assessment results and academic performance data. 
+    const systemContext = `You are an AI assistant specialized in analyzing assessment results and academic performance data. 
 
 You have access to the following assessment results data:
 - Total Submissions: ${resultsSummary.totalSubmissions}
@@ -84,7 +84,9 @@ You can analyze trends, identify patterns, suggest improvements, compare perform
 Detailed Results:
 ${JSON.stringify(resultsSummary.detailedResults, null, 2)}
 
-Please provide helpful, accurate, and actionable insights based on this data. Be concise but thorough in your analysis.`;
+Please provide helpful, accurate, and actionable insights based on this data. Be concise but thorough in your analysis.
+
+User Query: ${query}`;
 
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + geminiApiKey, {
       method: 'POST',
@@ -96,14 +98,7 @@ Please provide helpful, accurate, and actionable insights based on this data. Be
           {
             parts: [
               {
-                text: systemPrompt
-              }
-            ]
-          },
-          {
-            parts: [
-              {
-                text: query
+                text: systemContext
               }
             ]
           }
