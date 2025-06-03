@@ -57,13 +57,13 @@ const Results: React.FC = () => {
       
       if (assessmentId) {
         // Verify this assessment is in the organization
-        if (orgAssessments && orgAssessments.includes(assessmentId)) {
+        if (orgAssessments && orgAssessments.some(a => a.id === assessmentId)) {
           assessmentIds = [assessmentId];
         } else {
           return []; // Assessment not in organization
         }
       } else {
-        assessmentIds = orgAssessments || [];
+        assessmentIds = orgAssessments?.map(a => a.id) || [];
       }
       
       if (assessmentIds.length === 0) {
