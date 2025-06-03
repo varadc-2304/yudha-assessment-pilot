@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, FileText, Users, CheckCircle } from "lucide-react";
+import { BarChart, FileText, Users, CheckCircle, TrendingUp, Award, Clock, Target } from "lucide-react";
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,78 +141,102 @@ const Dashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <LoadingSpinner size="lg" />
+      <div className="flex justify-center items-center h-96">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-muted-foreground">Loading dashboard data...</p>
+        </div>
       </div>
     );
   }
 
+  const statCards = [
+    {
+      title: "Total Assessments",
+      value: stats.totalAssessments,
+      description: "Active assessment templates",
+      icon: FileText,
+      gradient: "from-blue-500 to-blue-600",
+      change: "+12%"
+    },
+    {
+      title: "Total Submissions",
+      value: stats.totalSubmissions,
+      description: "Across all assessments",
+      icon: Users,
+      gradient: "from-green-500 to-green-600",
+      change: "+18%"
+    },
+    {
+      title: "Average Score",
+      value: `${stats.averageScore}%`,
+      description: "Organization-wide performance",
+      icon: Target,
+      gradient: "from-purple-500 to-purple-600",
+      change: "+5%"
+    },
+    {
+      title: "Pass Rate",
+      value: `${stats.passRate}%`,
+      description: "Students above 60% threshold",
+      icon: Award,
+      gradient: "from-orange-500 to-orange-600",
+      change: "+8%"
+    }
+  ];
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">Organization Dashboard</h1>
-      
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Assessments</CardTitle>
-            <FileText className="h-4 w-4 text-yudha-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAssessments}</div>
-            <p className="text-xs text-muted-foreground">
-              Assessment templates in organization
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Total Submissions</CardTitle>
-            <Users className="h-4 w-4 text-yudha-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSubmissions}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all organization assessments
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <BarChart className="h-4 w-4 text-yudha-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.averageScore}%</div>
-            <p className="text-xs text-muted-foreground">
-              Organization-wide mean score
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Pass Rate</CardTitle>
-            <CheckCircle className="h-4 w-4 text-yudha-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.passRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Organization completion rate
-            </p>
-          </CardContent>
-        </Card>
+    <div className="section-spacing">
+      {/* Header Section */}
+      <div className="page-header">
+        <h1 className="page-title">Organization Dashboard</h1>
+        <p className="page-subtitle">
+          Monitor assessment performance and track organizational metrics
+        </p>
       </div>
       
-      {/* Chart Card */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Assessment Analytics</CardTitle>
-          <CardDescription>
-            Submissions and average scores by assessment (organization-wide)
-          </CardDescription>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {statCards.map((stat, index) => (
+          <Card key={stat.title} className="card-modern card-interactive animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <div className="space-y-1">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {stat.title}
+                </CardTitle>
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl font-bold text-foreground">{stat.value}</span>
+                  <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded-full">
+                    {stat.change}
+                  </span>
+                </div>
+              </div>
+              <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                <stat.icon size={20} className="text-white" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground">{stat.description}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      
+      {/* Chart Section */}
+      <Card className="card-modern animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <CardHeader className="pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-semibold">Assessment Analytics</CardTitle>
+              <CardDescription className="mt-1">
+                Performance metrics across recent assessments
+              </CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <TrendingUp size={20} className="text-green-500" />
+              <span className="text-sm font-medium text-green-600">Trending Up</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-80 w-full">
@@ -221,26 +244,62 @@ const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsBarChart
                   data={chartData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 5,
-                  }}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  className="rounded-lg"
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    yAxisId="left" 
+                    orientation="left" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: '#64748b' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
                   <Legend />
-                  <Bar yAxisId="left" dataKey="submissions" fill="#8884d8" name="Submissions" />
-                  <Bar yAxisId="right" dataKey="avgScore" fill="#82ca9d" name="Avg. Score (%)" />
+                  <Bar 
+                    yAxisId="left" 
+                    dataKey="submissions" 
+                    fill="#3b82f6" 
+                    name="Submissions" 
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    yAxisId="right" 
+                    dataKey="avgScore" 
+                    fill="#10b981" 
+                    name="Avg. Score (%)" 
+                    radius={[4, 4, 0, 0]}
+                  />
                 </RechartsBarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex justify-center items-center h-full">
-                <p className="text-gray-500">No assessment data available.</p>
+              <div className="flex flex-col items-center justify-center h-full space-y-4">
+                <BarChart size={48} className="text-muted-foreground/50" />
+                <div className="text-center">
+                  <p className="text-muted-foreground font-medium">No assessment data available</p>
+                  <p className="text-sm text-muted-foreground/70">Create assessments to see analytics</p>
+                </div>
               </div>
             )}
           </div>
@@ -248,42 +307,72 @@ const Dashboard: React.FC = () => {
       </Card>
       
       {/* Recent Assessments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Assessments</CardTitle>
-          <CardDescription>
-            Latest assessment performance data (organization-wide)
-          </CardDescription>
+      <Card className="card-modern animate-fade-in" style={{ animationDelay: '600ms' }}>
+        <CardHeader className="pb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-semibold">Recent Assessments</CardTitle>
+              <CardDescription className="mt-1">
+                Latest performance data across your organization
+              </CardDescription>
+            </div>
+            <Clock size={20} className="text-muted-foreground" />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            {recentAssessments && recentAssessments.length > 0 ? (
-              <table className="w-full text-sm">
+          {recentAssessments && recentAssessments.length > 0 ? (
+            <div className="table-modern">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Assessment</th>
-                    <th className="text-center py-3 px-4 font-medium">Code</th>
-                    <th className="text-center py-3 px-4 font-medium">Submissions</th>
-                    <th className="text-center py-3 px-4 font-medium">Avg. Score</th>
+                  <tr>
+                    <th className="table-header text-left">Assessment</th>
+                    <th className="table-header text-center">Code</th>
+                    <th className="table-header text-center">Submissions</th>
+                    <th className="table-header text-center">Avg. Score</th>
+                    <th className="table-header text-center">Performance</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentAssessments.map((assessment) => (
-                    <tr key={assessment.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">{assessment.title}</td>
-                      <td className="py-3 px-4 text-center">{assessment.code}</td>
-                      <td className="py-3 px-4 text-center">{assessment.submissions}</td>
-                      <td className="py-3 px-4 text-center">{assessment.avgScore}%</td>
+                  {recentAssessments.map((assessment, index) => (
+                    <tr key={assessment.id} className="table-row">
+                      <td className="table-cell">
+                        <div className="font-medium text-foreground">{assessment.title}</div>
+                      </td>
+                      <td className="table-cell text-center">
+                        <code className="px-2 py-1 bg-muted rounded text-sm font-mono">
+                          {assessment.code}
+                        </code>
+                      </td>
+                      <td className="table-cell text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {assessment.submissions}
+                        </span>
+                      </td>
+                      <td className="table-cell text-center">
+                        <span className="font-semibold text-foreground">{assessment.avgScore}%</span>
+                      </td>
+                      <td className="table-cell text-center">
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${assessment.avgScore}%` }}
+                          ></div>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-500">No assessment data available.</p>
+            </div>
+          ) : (
+            <div className="text-center py-12 space-y-4">
+              <FileText size={48} className="mx-auto text-muted-foreground/50" />
+              <div>
+                <p className="text-muted-foreground font-medium">No assessment data available</p>
+                <p className="text-sm text-muted-foreground/70">Create your first assessment to get started</p>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

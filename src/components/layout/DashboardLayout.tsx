@@ -9,9 +9,9 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <Header />
-      <main className="p-4 md:p-6">
+      <main className="page-container">
         <div className="animate-fade-in">
           {children}
         </div>

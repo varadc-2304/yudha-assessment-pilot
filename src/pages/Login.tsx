@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, User } from "lucide-react";
+import { Lock, User, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,50 +21,57 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 to-red-600">
-      <div className="w-full max-w-md px-4">
-        <Card className="border-red-300/10 shadow-xl bg-white/95 backdrop-blur">
-          <CardHeader className="space-y-2 text-center">
-            <div className="flex justify-center mb-2">
-              <img src="/Yudha.png" alt="Yudha Logo" className="w-16 h-16 object-contain" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-red-900">Yudha Admin Portal</CardTitle>
-            <CardDescription>Sign in to access the admin dashboard</CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-primary/5 p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+            <img src="/Yudha.png" alt="Yudha Logo" className="h-10 w-10 object-contain brightness-0 invert" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground mt-2">Sign in to your admin account</p>
+        </div>
+
+        <Card className="border-border/50 shadow-lg backdrop-blur-sm animate-scale-in">
+          <CardHeader className="space-y-3 text-center pb-6">
+            <CardTitle className="text-2xl font-bold text-foreground">Yudha Admin Portal</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Access your assessment management dashboard
+            </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
+            <CardContent className="space-y-5">
+              <div className="form-group-modern">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                  Email Address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
-                    <User size={16} />
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <User size={18} className="text-muted-foreground" />
                   </div>
                   <Input
                     id="email"
                     type="email"
                     placeholder="admin@example.com"
-                    className="pl-10"
+                    className="pl-10 input-modern focus-ring"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
+              <div className="form-group-modern">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
-                    <Lock size={16} />
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Lock size={18} className="text-muted-foreground" />
                   </div>
                   <Input
                     id="password"
                     type="password"
                     placeholder="Enter your password"
-                    className="pl-10"
+                    className="pl-10 input-modern focus-ring"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -75,20 +82,28 @@ const Login = () => {
             <CardFooter>
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-to-r from-red-500 to-red-700 hover:from-red-600 hover:to-red-800" 
+                className="w-full btn-gradient-primary h-11 text-base font-medium" 
                 disabled={loading}
               >
                 {loading ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" /> Signing in...
+                  <div className="flex items-center space-x-2">
+                    <LoadingSpinner size="sm" />
+                    <span>Signing in...</span>
                   </div>
                 ) : (
-                  "Sign in"
+                  <div className="flex items-center space-x-2">
+                    <span>Sign In</span>
+                    <ArrowRight size={18} />
+                  </div>
                 )}
               </Button>
             </CardFooter>
           </form>
         </Card>
+
+        <div className="text-center mt-6 text-sm text-muted-foreground animate-fade-in">
+          <p>Secure admin access • Yudha Assessment Platform</p>
+        </div>
       </div>
     </div>
   );
