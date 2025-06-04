@@ -156,13 +156,13 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
         if (examplesError) throw examplesError;
       }
 
-      // Insert languages
+      // Insert languages - handle constraints as string
       if (bankQuestion.languages.length > 0) {
         const languagesToInsert = bankQuestion.languages.map(language => ({
           coding_question_id: newQuestion.id,
           coding_lang: language.coding_lang,
           solution_template: language.solution_template,
-          constraints: language.constraints
+          constraints: language.constraints ? [language.constraints] : []
         }));
 
         const { error: languagesError } = await supabase

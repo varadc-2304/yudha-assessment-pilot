@@ -46,7 +46,7 @@ export interface CodingLanguageBank {
   coding_question_bank_id: string;
   coding_lang: string;
   solution_template: string;
-  constraints?: string[];
+  constraints?: string;
 }
 
 export interface TestCaseBank {
