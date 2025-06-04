@@ -40,53 +40,70 @@ serve(async (req) => {
     for (const constraint of constraints) {
       const { topic, question_type, difficulty, number_of_questions } = constraint;
 
-      for (let i = 0; i < number_of_questions; i++) {
-        if (question_type === 'mcq') {
-          // Generate MCQ question
-          const mcqPrompt = `Generate a multiple choice question about "${topic}" with difficulty level "${difficulty}".
+      if (question_type === 'mcq' && number_of_questions > 1) {
+        // Generate multiple unique MCQ questions in a single request
+        const mcqPrompt = `Generate ${number_of_questions} UNIQUE multiple choice questions about "${topic}" with difficulty level "${difficulty}".
 
-Please respond with ONLY a valid JSON object in this exact format:
-{
-  "question": "The question text here",
-  "description": "Optional description or context",
-  "options": [
-    {"text": "Option 1 text", "isCorrect": false},
-    {"text": "Option 2 text", "isCorrect": false},
-    {"text": "Option 3 text", "isCorrect": true},
-    {"text": "Option 4 text", "isCorrect": false}
-  ]
-}
+IMPORTANT: Each question must be completely different from the others. Do not repeat similar concepts or questions.
+
+Please respond with ONLY a valid JSON array containing ${number_of_questions} unique question objects in this exact format:
+[
+  {
+    "question": "First unique question text here",
+    "description": "Optional description or context",
+    "options": [
+      {"text": "Option 1 text", "isCorrect": false},
+      {"text": "Option 2 text", "isCorrect": false},
+      {"text": "Option 3 text", "isCorrect": true},
+      {"text": "Option 4 text", "isCorrect": false}
+    ]
+  },
+  {
+    "question": "Second unique question text here (completely different from first)",
+    "description": "Optional description or context",
+    "options": [
+      {"text": "Option 1 text", "isCorrect": false},
+      {"text": "Option 2 text", "isCorrect": true},
+      {"text": "Option 3 text", "isCorrect": false},
+      {"text": "Option 4 text", "isCorrect": false}
+    ]
+  }
+]
 
 Requirements:
-- Generate exactly 4 options
-- Mark exactly one option as correct (isCorrect: true)
-- Make the question appropriate for the specified difficulty level
-- Ensure the question is clear and unambiguous`;
+- Generate exactly ${number_of_questions} UNIQUE questions
+- Each question must cover different aspects of "${topic}"
+- Generate exactly 4 options per question
+- Mark exactly one option as correct (isCorrect: true) per question
+- Make questions appropriate for the specified difficulty level
+- Ensure all questions are clear and unambiguous
+- NO duplicate or similar questions`;
 
-          const mcqResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: mcqPrompt }] }],
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 1024,
-              }
-            }),
-          });
+        const mcqResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: mcqPrompt }] }],
+            generationConfig: {
+              temperature: 0.8,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 4096,
+            }
+          }),
+        });
 
-          if (mcqResponse.ok) {
-            const mcqData = await mcqResponse.json();
-            const generatedText = mcqData.candidates?.[0]?.content?.parts?.[0]?.text;
-            
-            if (generatedText) {
-              try {
-                const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                  const questionData = JSON.parse(jsonMatch[0]);
-                  
+        if (mcqResponse.ok) {
+          const mcqData = await mcqResponse.json();
+          const generatedText = mcqData.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (generatedText) {
+            try {
+              const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+              if (jsonMatch) {
+                const questionsData = JSON.parse(jsonMatch[0]);
+                
+                for (const questionData of questionsData) {
                   // Insert MCQ question
                   const { data: mcqQuestion, error: mcqError } = await supabase
                     .from('mcq_questions')
@@ -116,17 +133,100 @@ Requirements:
 
                   if (optionsError) throw optionsError;
                 }
-              } catch (parseError) {
-                console.error('Failed to parse MCQ question:', parseError);
               }
+            } catch (parseError) {
+              console.error('Failed to parse MCQ questions:', parseError);
             }
           }
-        } else if (question_type === 'coding') {
-          // Generate coding question
-          const codingPrompt = `Generate a coding question based on the following requirements:
+        }
+      } else if (question_type === 'mcq') {
+        // Single MCQ question (existing logic)
+        const mcqPrompt = `Generate a multiple choice question about "${topic}" with difficulty level "${difficulty}".
 
-Topic: ${topic}
-Difficulty: ${difficulty}
+Please respond with ONLY a valid JSON object in this exact format:
+{
+  "question": "The question text here",
+  "description": "Optional description or context",
+  "options": [
+    {"text": "Option 1 text", "isCorrect": false},
+    {"text": "Option 2 text", "isCorrect": false},
+    {"text": "Option 3 text", "isCorrect": true},
+    {"text": "Option 4 text", "isCorrect": false}
+  ]
+}
+
+Requirements:
+- Generate exactly 4 options
+- Mark exactly one option as correct (isCorrect: true)
+- Make the question appropriate for the specified difficulty level
+- Ensure the question is clear and unambiguous`;
+
+        const mcqResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: mcqPrompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            }
+          }),
+        });
+
+        if (mcqResponse.ok) {
+          const mcqData = await mcqResponse.json();
+          const generatedText = mcqData.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (generatedText) {
+            try {
+              const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const questionData = JSON.parse(jsonMatch[0]);
+                
+                // Insert MCQ question
+                const { data: mcqQuestion, error: mcqError } = await supabase
+                  .from('mcq_questions')
+                  .insert({
+                    assessment_id: assessmentId,
+                    title: questionData.question,
+                    description: questionData.description || '',
+                    marks: difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3,
+                    order_index: totalOrderIndex++
+                  })
+                  .select()
+                  .single();
+
+                if (mcqError) throw mcqError;
+
+                // Insert MCQ options
+                const options = questionData.options.map((opt: any, index: number) => ({
+                  mcq_question_id: mcqQuestion.id,
+                  text: opt.text,
+                  is_correct: opt.isCorrect,
+                  order_index: index
+                }));
+
+                const { error: optionsError } = await supabase
+                  .from('mcq_options')
+                  .insert(options);
+
+                if (optionsError) throw optionsError;
+              }
+            } catch (parseError) {
+              console.error('Failed to parse MCQ question:', parseError);
+            }
+          }
+        }
+      } else if (question_type === 'coding') {
+        for (let i = 0; i < number_of_questions; i++) {
+          // Generate unique coding questions
+          const uniquePrompt = number_of_questions > 1 ? 
+            `Generate a UNIQUE coding question (${i + 1} of ${number_of_questions}) about "${topic}" with difficulty level "${difficulty}". Make sure this question is completely different from other questions that might be generated on the same topic.` :
+            `Generate a coding question about "${topic}" with difficulty level "${difficulty}".`;
+
+          const codingPrompt = `${uniquePrompt}
 
 Please generate a comprehensive coding question with the following structure and return ONLY a valid JSON object with no additional text:
 
@@ -134,10 +234,10 @@ Please generate a comprehensive coding question with the following structure and
   "title": "A clear, concise title for the coding problem",
   "description": "A detailed description of the problem including constraints, input format, output format, and any special requirements. Make it comprehensive but clear.",
   "solutionTemplates": {
-    "c": "Complete C solution template with includes, function signature, and basic structure for reading input and producing output",
-    "cpp": "Complete C++ solution template with includes, function signature, and basic structure for reading input and producing output", 
-    "java": "Complete Java solution template with class structure, main method, and function signature for reading input and producing output",
-    "python": "Complete Python solution template with function signature and basic structure for reading input and producing output"
+    "c": "Complete C solution template with includes and a function that the user needs to complete. The function should have a clear signature and the user should fill in the implementation. Include main function for input/output handling.",
+    "cpp": "Complete C++ solution template with includes and a function that the user needs to complete. The function should have a clear signature and the user should fill in the implementation. Include main function for input/output handling.", 
+    "java": "Complete Java solution template with class structure, main method, and a function that the user needs to complete. The function should have a clear signature and the user should fill in the implementation.",
+    "python": "Complete Python solution template with a function that the user needs to complete. The function should have a clear signature and the user should fill in the implementation. Include input/output handling code."
   },
   "examples": [
     {
@@ -194,6 +294,16 @@ Please generate a comprehensive coding question with the following structure and
   }
 }
 
+IMPORTANT REQUIREMENTS for solution templates:
+- Each template must have a clear function signature that the user needs to implement
+- The function name should be descriptive and relevant to the problem
+- Include proper input/output handling around the function
+- Leave the function body empty or with a TODO comment for the user to complete
+- Make sure the function signature matches the problem requirements
+- For C/C++: Include necessary headers and main function
+- For Java: Include class structure and main method
+- For Python: Include proper function definition and input/output handling
+
 Make sure the problem is appropriate for ${difficulty} difficulty level.`;
 
           const codingResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
@@ -202,7 +312,7 @@ Make sure the problem is appropriate for ${difficulty} difficulty level.`;
             body: JSON.stringify({
               contents: [{ parts: [{ text: codingPrompt }] }],
               generationConfig: {
-                temperature: 0.7,
+                temperature: 0.8,
                 topK: 40,
                 topP: 0.95,
                 maxOutputTokens: 8192,

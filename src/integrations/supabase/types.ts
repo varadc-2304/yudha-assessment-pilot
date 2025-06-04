@@ -269,7 +269,7 @@ export type Database = {
         Row: {
           coding_lang: string
           coding_question_bank_id: string
-          constraints: string[] | null
+          constraints: string | null
           created_at: string
           id: string
           solution_template: string
@@ -277,7 +277,7 @@ export type Database = {
         Insert: {
           coding_lang: string
           coding_question_bank_id: string
-          constraints?: string[] | null
+          constraints?: string | null
           created_at?: string
           id?: string
           solution_template: string
@@ -285,7 +285,7 @@ export type Database = {
         Update: {
           coding_lang?: string
           coding_question_bank_id?: string
-          constraints?: string[] | null
+          constraints?: string | null
           created_at?: string
           id?: string
           solution_template?: string
