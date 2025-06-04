@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import AssessmentConstraints from "@/components/assessment/AssessmentConstraints";
+import { Sparkles } from "lucide-react";
 
 const assessmentSchema = z.object({
   name: z.string().min(3, { message: "Assessment name must be at least 3 characters" }),
@@ -43,6 +44,8 @@ const CreateAssessment: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [constraints, setConstraints] = useState<AssessmentConstraint[]>([]);
+  const [generateWithAI, setGenerateWithAI] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const form = useForm<AssessmentFormValues>({
     resolver: zodResolver(assessmentSchema),
@@ -64,11 +67,11 @@ const CreateAssessment: React.FC = () => {
 
   const onSubmit = async (values: AssessmentFormValues) => {
     try {
-      // Validate constraints if dynamic assessment
-      if (values.is_dynamic && constraints.length === 0) {
+      // Validate constraints if dynamic assessment or AI generation
+      if ((values.is_dynamic || generateWithAI) && constraints.length === 0) {
         toast({
           title: "Error",
-          description: "Dynamic assessments must have at least one constraint",
+          description: generateWithAI ? "AI generation requires at least one constraint" : "Dynamic assessments must have at least one constraint",
           variant: "destructive"
         });
         return;
@@ -118,10 +121,39 @@ const CreateAssessment: React.FC = () => {
         if (constraintsError) throw constraintsError;
       }
 
-      toast({
-        title: "Assessment Created",
-        description: "The assessment has been successfully created."
-      });
+      // Generate questions with AI if enabled
+      if (generateWithAI && constraints.length > 0) {
+        setIsGenerating(true);
+        try {
+          const { data: generateData, error: generateError } = await supabase.functions.invoke('generate-assessment-questions', {
+            body: {
+              assessmentId: data.id,
+              constraints: constraints
+            }
+          });
+
+          if (generateError) throw generateError;
+
+          toast({
+            title: "Assessment Created with AI",
+            description: "The assessment has been successfully created with AI-generated questions."
+          });
+        } catch (generateError: any) {
+          console.error("Error generating questions:", generateError);
+          toast({
+            title: "Assessment Created",
+            description: "Assessment created successfully, but some questions may not have been generated. You can add questions manually.",
+            variant: "default"
+          });
+        } finally {
+          setIsGenerating(false);
+        }
+      } else {
+        toast({
+          title: "Assessment Created",
+          description: "The assessment has been successfully created."
+        });
+      }
       
       // Invalidate assessments query to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['assessments'] });
@@ -133,6 +165,7 @@ const CreateAssessment: React.FC = () => {
         description: error.message || "Failed to create assessment",
         variant: "destructive"
       });
+      setIsGenerating(false);
     }
   };
 
@@ -329,12 +362,29 @@ const CreateAssessment: React.FC = () => {
                 />
               </div>
 
+              {/* Generate with AI Toggle */}
+              <div className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm bg-gradient-to-r from-blue-50 to-purple-50">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    <span className="font-medium text-gray-900">Generate with AI</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically generate questions using AI based on your constraints
+                  </p>
+                </div>
+                <Switch
+                  checked={generateWithAI}
+                  onCheckedChange={setGenerateWithAI}
+                />
+              </div>
+
               {/* Dynamic Assessment Constraints */}
-              {isDynamic && (
+              {(isDynamic || generateWithAI) && (
                 <AssessmentConstraints
                   constraints={constraints}
                   onChange={setConstraints}
-                  disabled={!isDynamic}
+                  disabled={!isDynamic && !generateWithAI}
                 />
               )}
 
@@ -343,10 +393,27 @@ const CreateAssessment: React.FC = () => {
                   type="button" 
                   variant="outline" 
                   onClick={() => navigate("/assessments")}
+                  disabled={isGenerating}
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Create Assessment</Button>
+                <Button 
+                  type="submit" 
+                  disabled={isGenerating}
+                  className={generateWithAI ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" : ""}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2 animate-spin" />
+                      Generating Questions...
+                    </>
+                  ) : (
+                    <>
+                      {generateWithAI && <Sparkles className="h-4 w-4 mr-2" />}
+                      Create Assessment
+                    </>
+                  )}
+                </Button>
               </div>
             </form>
           </Form>
