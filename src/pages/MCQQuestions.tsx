@@ -1,9 +1,8 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Edit, Trash2, Database, Sparkles } from "lucide-react";
+import { Check, Plus, Edit, Trash2, Database } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -304,10 +303,6 @@ const MCQQuestions: React.FC = () => {
             <DropdownMenuItem onClick={() => setShowCreateForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Create New Question
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/mcq-questions")}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate with AI
             </DropdownMenuItem>
             {orgAssessments && orgAssessments.length > 0 && (
               <>

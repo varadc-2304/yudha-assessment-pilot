@@ -86,6 +86,26 @@
   }
 }
 
+/* Fix hover effects to prevent white text */
+.hover-fix:hover {
+  @apply bg-muted/50 text-foreground !important;
+}
+
+/* Navigation menu specific hover fixes */
+[data-radix-navigation-menu-trigger]:hover {
+  @apply text-foreground !important;
+}
+
+/* Dropdown menu item hover fixes */
+[data-radix-dropdown-menu-item]:hover {
+  @apply text-foreground !important;
+}
+
+/* Button hover fixes */
+button:hover:not(.btn-gradient-primary):not([data-destructive]) {
+  @apply text-foreground !important;
+}
+
 /* Enhanced Animations */
 @keyframes fadeIn {
   from { 

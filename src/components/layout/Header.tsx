@@ -96,7 +96,7 @@ const Header: React.FC = () => {
           <NavigationMenu className="lg:hidden">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted/50">
+                <NavigationMenuTrigger className="bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted/50 text-foreground hover:text-foreground">
                   Menu
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
@@ -129,7 +129,7 @@ const Header: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center space-x-2 rounded-xl px-3 py-2 hover:bg-muted/50"
+                  className="flex items-center space-x-2 rounded-xl px-3 py-2 hover:bg-muted/50 text-foreground hover:text-foreground"
                 >
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
                     <User size={16} />
