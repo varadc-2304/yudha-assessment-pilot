@@ -1,12 +1,14 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, Edit, Trash2, Database } from "lucide-react";
+import { Check, Plus, Edit, Trash2, Database, Sparkles } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +51,7 @@ const MCQQuestions: React.FC = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAssessment, setSelectedAssessment] = useState<string>("all");
   const [selectedQuestion, setSelectedQuestion] = useState<MCQQuestion | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -230,10 +233,14 @@ const MCQQuestions: React.FC = () => {
     setShowBankSelector(true);
   };
 
-  const filteredQuestions = questions?.filter((question) =>
-    question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    question.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredQuestions = questions?.filter((question) => {
+    const matchesSearch = question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      question.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesAssessment = selectedAssessment === "all" || question.assessmentId === selectedAssessment;
+    
+    return matchesSearch && matchesAssessment;
+  }) || [];
 
   // Get unique assessments for the dropdown
   const uniqueAssessments = Array.from(
@@ -298,6 +305,10 @@ const MCQQuestions: React.FC = () => {
               <Plus className="mr-2 h-4 w-4" />
               Create New Question
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/mcq-questions")}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate with AI
+            </DropdownMenuItem>
             {orgAssessments && orgAssessments.length > 0 && (
               <>
                 <DropdownMenuItem disabled className="text-xs text-gray-500">
@@ -319,21 +330,42 @@ const MCQQuestions: React.FC = () => {
         </DropdownMenu>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle>Search Questions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Search Questions</CardTitle>
+          </CardHeader>
+          <CardContent>
             <Input
               placeholder="Search questions..."
               value={searchTerm}
               onChange={handleSearch}
               className="w-full"
             />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Filter by Assessment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select assessment" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assessments</SelectItem>
+                {uniqueAssessments.map((assessment) => (
+                  <SelectItem key={assessment.id} value={assessment.id}>
+                    {assessment.name} ({assessment.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-8">

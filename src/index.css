@@ -175,7 +175,7 @@
 }
 
 .btn-glass {
-  @apply bg-white/10 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/20 transition-all duration-300;
+  @apply bg-background/10 backdrop-blur-md border border-border/20 text-foreground hover:bg-background/20 transition-all duration-300;
 }
 
 /* Professional Form Styles */
@@ -256,7 +256,7 @@
 }
 
 .shimmer::after {
-  @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent;
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-background/20 to-transparent;
   content: '';
   animation: shimmer 2s infinite;
 }
@@ -294,7 +294,7 @@
 
 /* Glass Morphism */
 .glass {
-  @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  @apply bg-background/10 backdrop-blur-lg border border-border/20;
 }
 
 .glass-dark {

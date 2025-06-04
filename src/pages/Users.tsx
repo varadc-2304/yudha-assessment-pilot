@@ -1,9 +1,9 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -21,17 +21,11 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["student", "admin"], {
-    required_error: "Please select a role",
-  }),
 });
 
 const editUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["student", "admin"], {
-    required_error: "Please select a role",
-  }),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -51,7 +45,6 @@ const Users: React.FC = () => {
       email: "",
       password: "",
       name: "",
-      role: "student",
     },
   });
 
@@ -60,18 +53,18 @@ const Users: React.FC = () => {
     defaultValues: {
       email: "",
       name: "",
-      role: "student",
     },
   });
 
-  // Query to fetch users in the organization
+  // Query to fetch only admin users in the organization
   const { data: users, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['organization-users', user?.organization],
+    queryKey: ['organization-admin-users', user?.organization],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('auth')
         .select('*')
         .eq('organization', user?.organization)
+        .eq('role', 'admin')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -80,7 +73,7 @@ const Users: React.FC = () => {
     enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
   });
 
-  // Create user mutation
+  // Create admin user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormData) => {
       const { data, error } = await supabase
@@ -90,7 +83,7 @@ const Users: React.FC = () => {
             email: userData.email,
             password: userData.password,
             name: userData.name,
-            role: userData.role,
+            role: 'admin', // Force admin role
             organization: user?.organization,
           }
         ])
@@ -101,18 +94,18 @@ const Users: React.FC = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-admin-users'] });
       setIsCreateDialogOpen(false);
       createForm.reset();
       toast({
         title: "Success",
-        description: "User created successfully",
+        description: "Admin user created successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create user",
+        description: error.message || "Failed to create admin user",
         variant: "destructive",
       });
     },
@@ -120,13 +113,12 @@ const Users: React.FC = () => {
 
   // Update user mutation
   const updateUserMutation = useMutation({
-    mutationFn: async (userData: { id: string; email: string; name: string; role: string }) => {
+    mutationFn: async (userData: { id: string; email: string; name: string }) => {
       const { data, error } = await supabase
         .from('auth')
         .update({
           email: userData.email,
           name: userData.name,
-          role: userData.role,
         })
         .eq('id', userData.id)
         .select()
@@ -136,19 +128,19 @@ const Users: React.FC = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-admin-users'] });
       setIsEditDialogOpen(false);
       setEditingUser(null);
       editForm.reset();
       toast({
         title: "Success",
-        description: "User updated successfully",
+        description: "Admin user updated successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update user",
+        description: error.message || "Failed to update admin user",
         variant: "destructive",
       });
     },
@@ -165,16 +157,16 @@ const Users: React.FC = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['organization-users'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-admin-users'] });
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: "Admin user deleted successfully",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete user",
+        description: error.message || "Failed to delete admin user",
         variant: "destructive",
       });
     },
@@ -190,13 +182,12 @@ const Users: React.FC = () => {
         id: editingUser.id,
         email: data.email,
         name: data.name,
-        role: data.role,
       });
     }
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
+    if (confirm("Are you sure you want to delete this admin user?")) {
       deleteUserMutation.mutate(userId);
     }
   };
@@ -206,7 +197,6 @@ const Users: React.FC = () => {
     editForm.reset({
       email: user.email,
       name: user.name,
-      role: user.role,
     });
     setIsEditDialogOpen(true);
   };
@@ -222,19 +212,19 @@ const Users: React.FC = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Users Management</h1>
+        <h1 className="text-2xl font-bold">Admin Users Management</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
-              Add User
+              Add Admin
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
+              <DialogTitle>Add New Admin User</DialogTitle>
               <DialogDescription>
-                Create a new user account for your organization.
+                Create a new admin user account for your organization.
               </DialogDescription>
             </DialogHeader>
             <Form {...createForm}>
@@ -246,7 +236,7 @@ const Users: React.FC = () => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="user@example.com" {...field} />
+                        <Input placeholder="admin@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -278,30 +268,9 @@ const Users: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={createForm.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <DialogFooter>
                   <Button type="submit" disabled={createUserMutation.isPending}>
-                    {createUserMutation.isPending ? "Creating..." : "Create User"}
+                    {createUserMutation.isPending ? "Creating..." : "Create Admin"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -314,9 +283,9 @@ const Users: React.FC = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Edit Admin User</DialogTitle>
             <DialogDescription>
-              Update user information.
+              Update admin user information.
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
@@ -328,7 +297,7 @@ const Users: React.FC = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="user@example.com" {...field} />
+                      <Input placeholder="admin@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -347,30 +316,9 @@ const Users: React.FC = () => {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={editForm.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="student">Student</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <DialogFooter>
                 <Button type="submit" disabled={updateUserMutation.isPending}>
-                  {updateUserMutation.isPending ? "Updating..." : "Update User"}
+                  {updateUserMutation.isPending ? "Updating..." : "Update Admin"}
                 </Button>
               </DialogFooter>
             </form>
@@ -378,15 +326,15 @@ const Users: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Users Table */}
+      {/* Admin Users Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UsersIcon className="h-5 w-5" />
-            Organization Users
+            Organization Admin Users
           </CardTitle>
           <CardDescription>
-            Manage users in your organization
+            Manage admin users in your organization
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -408,12 +356,8 @@ const Users: React.FC = () => {
                       <TableCell className="font-medium">{userData.name || '-'}</TableCell>
                       <TableCell>{userData.email}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          userData.role === 'admin' 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {userData.role}
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          admin
                         </span>
                       </TableCell>
                       <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
@@ -442,7 +386,7 @@ const Users: React.FC = () => {
               </Table>
             ) : (
               <div className="text-center py-6">
-                <p className="text-gray-500">No users found in your organization.</p>
+                <p className="text-gray-500">No admin users found in your organization.</p>
               </div>
             )}
           </div>

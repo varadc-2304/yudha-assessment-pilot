@@ -246,12 +246,10 @@ const Assessments: React.FC = () => {
                     </div>
                     <div className="bg-gray-50 p-6 flex flex-row md:flex-col justify-between items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleViewAssessment(assessment)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEditAssessment(assessment)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
@@ -261,13 +259,11 @@ const Assessments: React.FC = () => {
                           setIsDeleteDialogOpen(true);
                         }}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button variant="outline" size="sm" asChild>
                         <Link to={`/results/${assessment.id}`}>
-                          <BarChart className="h-4 w-4 mr-2" />
-                          Results
+                          <BarChart className="h-4 w-4" />
                         </Link>
                       </Button>
                     </div>

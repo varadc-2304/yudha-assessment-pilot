@@ -63,20 +63,11 @@ const Header: React.FC = () => {
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-6">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo Section */}
+          {/* Title Section */}
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                <img 
-                  src="/Yudha.png" 
-                  alt="Yudha Logo" 
-                  className="h-6 w-6 object-contain brightness-0 invert"
-                />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Yudha Admin</h1>
-                <p className="text-xs text-muted-foreground">Assessment Platform</p>
-              </div>
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Yudha Admin</h1>
+              <p className="text-xs text-muted-foreground">Assessment Platform</p>
             </div>
           </div>
 
@@ -106,10 +97,7 @@ const Header: React.FC = () => {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger className="bg-transparent hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                  <span className="flex items-center space-x-2">
-                    <span>Menu</span>
-                    <ChevronDown size={16} />
-                  </span>
+                  Menu
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
                   <div className="grid w-[300px] gap-2 p-4">
