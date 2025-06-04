@@ -24,6 +24,7 @@ const assessmentSchema = z.object({
   end_time: z.string().optional(),
   is_practice: z.boolean().default(false),
   is_dynamic: z.boolean().default(false),
+  is_ai_proctored: z.boolean().default(true),
   reattempt: z.boolean().default(false)
 });
 
@@ -54,6 +55,7 @@ const CreateAssessment: React.FC = () => {
       end_time: "",
       is_practice: false,
       is_dynamic: false,
+      is_ai_proctored: true,
       reattempt: false
     }
   });
@@ -72,6 +74,9 @@ const CreateAssessment: React.FC = () => {
         return;
       }
 
+      // Get current user to set as creator
+      const { data: { user } } = await supabase.auth.getUser();
+      
       // Convert form timestamps to proper ISO format
       const startTime = new Date(values.start_time).toISOString();
       const endTime = values.end_time ? new Date(values.end_time).toISOString() : null;
@@ -87,8 +92,9 @@ const CreateAssessment: React.FC = () => {
           end_time: endTime,
           is_practice: values.is_practice,
           is_dynamic: values.is_dynamic,
+          is_ai_proctored: values.is_ai_proctored,
           reattempt: values.reattempt,
-          created_by: null // Will be replaced with actual user ID when auth is implemented
+          created_by: user?.id || null
         })
         .select()
         .single();
@@ -237,7 +243,7 @@ const CreateAssessment: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="is_practice"
@@ -268,6 +274,27 @@ const CreateAssessment: React.FC = () => {
                         <FormLabel>Dynamic Assessment</FormLabel>
                         <p className="text-sm text-muted-foreground">
                           Generate questions dynamically based on constraints
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="is_ai_proctored"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>AI Proctored</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Enable AI-powered proctoring during assessment
                         </p>
                       </div>
                       <FormControl>

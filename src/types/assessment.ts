@@ -18,6 +18,7 @@ export interface Assessment {
   updated_at?: string;
   is_practice: boolean;
   is_dynamic?: boolean;
+  is_ai_proctored?: boolean;
   reattempt: boolean;
   status?: string;
   created_by?: string | null;

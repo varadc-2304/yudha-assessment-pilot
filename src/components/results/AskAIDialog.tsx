@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X, Send, Bot, User, Sparkles, ArrowUp, CheckCircle } from "lucide-react";
+import { X, Send, User, Sparkles, ArrowUp, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -178,7 +178,10 @@ const AskAIDialog: React.FC<AskAIDialogProps> = ({
         <DialogHeader className="px-6 py-4 border-b border-gray-200 bg-gray-50/50">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-gray-900">
             <div className="relative">
-              <Bot className="h-6 w-6 text-primary" />
+              <svg className="h-6 w-6 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.5"/>
+              </svg>
               <Sparkles className="h-3 w-3 text-primary absolute -top-1 -right-1" />
             </div>
             AI Assistant
@@ -245,7 +248,10 @@ const AskAIDialog: React.FC<AskAIDialogProps> = ({
               <div className="text-center py-12">
                 <div className="relative inline-block mb-6">
                   <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                    <Bot className="h-8 w-8 text-primary" />
+                    <svg className="h-8 w-8 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.5"/>
+                    </svg>
                   </div>
                   <Sparkles className="h-4 w-4 text-primary absolute -top-1 -right-1" />
                 </div>
@@ -289,7 +295,10 @@ const AskAIDialog: React.FC<AskAIDialogProps> = ({
               >
                 {message.type === 'ai' && (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20">
-                    <Bot className="h-4 w-4 text-primary" />
+                    <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.5"/>
+                    </svg>
                   </div>
                 )}
                 
@@ -330,7 +339,10 @@ const AskAIDialog: React.FC<AskAIDialogProps> = ({
             {isLoading && (
               <div className="flex gap-4 justify-start">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                  <Bot className="h-4 w-4 text-primary" />
+                  <svg className="h-4 w-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.5"/>
+                  </svg>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md shadow-sm px-5 py-4">
                   <div className="flex items-center gap-3">

@@ -36,6 +36,7 @@ interface FormData {
   end_time: string;
   is_practice: boolean;
   is_dynamic: boolean;
+  is_ai_proctored: boolean;
   reattempt: boolean;
 }
 
@@ -59,6 +60,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
       end_time: assessment.end_time ? format(new Date(assessment.end_time), "yyyy-MM-dd'T'HH:mm") : "",
       is_practice: assessment.is_practice,
       is_dynamic: assessment.is_dynamic || false,
+      is_ai_proctored: assessment.is_ai_proctored || true,
       reattempt: assessment.reattempt
     }
   });
@@ -108,6 +110,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
   React.useEffect(() => {
     setValue("is_practice", assessment.is_practice);
     setValue("is_dynamic", assessment.is_dynamic || false);
+    setValue("is_ai_proctored", assessment.is_ai_proctored || true);
     setValue("reattempt", assessment.reattempt);
   }, [assessment, setValue]);
 
@@ -262,7 +265,7 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
           <Checkbox 
             id="is_practice"
@@ -281,6 +284,16 @@ const EditAssessmentForm: React.FC<EditAssessmentFormProps> = ({
             className="h-5 w-5 border-gray-300 text-purple-600 focus:ring-purple-500"
           />
           <Label htmlFor="is_dynamic" className="cursor-pointer font-medium">Dynamic Assessment</Label>
+        </div>
+
+        <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
+          <Checkbox 
+            id="is_ai_proctored"
+            checked={watch("is_ai_proctored")}
+            onCheckedChange={(checked) => setValue("is_ai_proctored", !!checked)}
+            className="h-5 w-5 border-gray-300 text-purple-600 focus:ring-purple-500"
+          />
+          <Label htmlFor="is_ai_proctored" className="cursor-pointer font-medium">AI Proctored</Label>
         </div>
 
         <div className="flex items-center space-x-2 rounded-md border p-4 shadow-sm bg-gray-50 hover:bg-gray-100 transition-colors duration-200">
