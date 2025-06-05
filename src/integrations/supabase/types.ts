@@ -308,6 +308,7 @@ export type Database = {
           difficulty: string | null
           id: string
           image_url: string | null
+          serial: number | null
           title: string
           topic: string | null
           updated_at: string
@@ -319,6 +320,7 @@ export type Database = {
           difficulty?: string | null
           id?: string
           image_url?: string | null
+          serial?: number | null
           title: string
           topic?: string | null
           updated_at?: string
@@ -330,6 +332,7 @@ export type Database = {
           difficulty?: string | null
           id?: string
           image_url?: string | null
+          serial?: number | null
           title?: string
           topic?: string | null
           updated_at?: string

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye, BarChart, Clock, Calendar, Users } from "lucide-react";
@@ -210,10 +209,10 @@ const Assessments: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAssessments && filteredAssessments.length > 0 ? (
             filteredAssessments.map((assessment) => (
-              <Card key={assessment.id} className="group relative overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/30 border border-gray-200/60">
-                <CardContent className="p-0">
+              <Card key={assessment.id} className="group relative overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/30 border border-gray-200/60 aspect-square flex flex-col">
+                <CardContent className="p-0 flex flex-col h-full">
                   {/* Header with Status Badge */}
-                  <div className="p-4 pb-3 border-b border-gray-100">
+                  <div className="p-4 pb-3 border-b border-gray-100 flex-shrink-0">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2" title={assessment.name}>
                         {assessment.name}
@@ -226,7 +225,7 @@ const Assessments: React.FC = () => {
                   </div>
 
                   {/* Key Information */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-4 space-y-3 flex-grow">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center text-gray-600">
                         <Clock className="h-4 w-4 mr-2" />
@@ -256,57 +255,51 @@ const Assessments: React.FC = () => {
                         </Badge>
                       )}
                     </div>
-
-                    {/* Instructions Preview */}
-                    {assessment.instructions && (
-                      <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                        {assessment.instructions}
-                      </p>
-                    )}
                   </div>
 
-                  {/* Action Buttons - Always Visible */}
-                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleViewAssessment(assessment)}
-                      className="h-8 w-8 bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm border border-gray-200/50"
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => handleEditAssessment(assessment)}
-                      className="h-8 w-8 bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm border border-gray-200/50"
-                      title="Edit Assessment"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Bottom Action Bar */}
-                  <div className="border-t border-gray-100 p-3 bg-gray-50/50">
-                    <div className="flex justify-between items-center">
+                  {/* Bottom Action Buttons - Always Visible */}
+                  <div className="border-t border-gray-100 p-3 bg-gray-50/50 flex-shrink-0">
+                    <div className="flex justify-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleViewAssessment(assessment)}
+                        className="h-9 w-9 hover:bg-blue-100 hover:text-blue-700"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleEditAssessment(assessment)}
+                        className="h-9 w-9 hover:bg-green-100 hover:text-green-700"
+                        title="Edit Assessment"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        asChild
+                        className="h-9 w-9 hover:bg-purple-100 hover:text-purple-700"
+                        title="View Results"
+                      >
+                        <Link to={`/results/${assessment.id}`}>
+                          <BarChart className="h-4 w-4" />
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => {
                           setSelectedAssessment(assessment);
                           setIsDeleteDialogOpen(true);
                         }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 h-auto"
+                        className="h-9 w-9 hover:bg-red-100 hover:text-red-700"
+                        title="Delete Assessment"
                       >
-                        <Trash2 className="h-4 w-4 mr-1.5" />
-                        Delete
-                      </Button>
-                      <Button variant="outline" size="sm" asChild className="px-3 py-1.5 h-auto">
-                        <Link to={`/results/${assessment.id}`}>
-                          <BarChart className="h-4 w-4 mr-1.5" />
-                          Results
-                        </Link>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
