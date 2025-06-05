@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash2, Eye, BarChart } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, BarChart, Clock, Calendar, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,11 +137,11 @@ const Assessments: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Scheduled':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">Scheduled</Badge>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Scheduled</Badge>;
       case 'Active':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 hover:bg-green-100">Active</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>;
       case 'Completed':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-700 hover:bg-gray-200">Completed</Badge>;
+        return <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-300">Completed</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -157,7 +157,6 @@ const Assessments: React.FC = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
-      year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -211,86 +210,101 @@ const Assessments: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAssessments && filteredAssessments.length > 0 ? (
             filteredAssessments.map((assessment) => (
-              <Card key={assessment.id} className="group relative overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 aspect-square flex flex-col">
-                <CardContent className="p-6 flex flex-col h-full">
-                  {/* Header Section */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-semibold text-foreground mb-2 truncate" title={assessment.name}>
+              <Card key={assessment.id} className="group relative overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/30 border border-gray-200/60">
+                <CardContent className="p-0">
+                  {/* Header with Status Badge */}
+                  <div className="p-4 pb-3 border-b border-gray-100">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 leading-tight line-clamp-2" title={assessment.name}>
                         {assessment.name}
                       </h3>
                       {getStatusBadge(assessment.status || 'Scheduled')}
                     </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <span className="font-medium text-primary">{assessment.code}</span>
+                    </div>
                   </div>
 
-                  {/* Content Section */}
-                  <div className="flex-1 space-y-3 mb-4">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Code:</span>{" "}
-                      <span className="font-medium text-foreground">{assessment.code}</span>
-                    </div>
-                    
-                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                      {assessment.instructions || "No instructions provided."}
-                    </p>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Duration:</span>
-                        <span className="font-medium">{assessment.duration_minutes} min</span>
+                  {/* Key Information */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center text-gray-600">
+                        <Clock className="h-4 w-4 mr-2" />
+                        <span>{assessment.duration_minutes} min</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Start:</span>
-                        <span className="font-medium text-xs">{formatDate(assessment.start_time)}</span>
+                      <div className="flex items-center text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>{formatDate(assessment.start_time)}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1">
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2">
                       {assessment.is_practice && (
-                        <Badge variant="secondary" className="text-xs">Practice</Badge>
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-0">
+                          Practice
+                        </Badge>
                       )}
                       {assessment.reattempt && (
-                        <Badge variant="secondary" className="text-xs">Reattempt</Badge>
+                        <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-0">
+                          Reattempt
+                        </Badge>
+                      )}
+                      {assessment.is_ai_proctored && (
+                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 border-0">
+                          AI Proctored
+                        </Badge>
                       )}
                     </div>
+
+                    {/* Instructions Preview */}
+                    {assessment.instructions && (
+                      <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                        {assessment.instructions}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Action Buttons Section */}
-                  <div className="mt-auto pt-4 border-t border-border">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewAssessment(assessment)}
-                        className="text-xs"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleEditAssessment(assessment)}
-                        className="text-xs"
-                      >
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Button>
+                  {/* Action Buttons - Always Visible */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleViewAssessment(assessment)}
+                      className="h-8 w-8 bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm border border-gray-200/50"
+                      title="View Details"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleEditAssessment(assessment)}
+                      className="h-8 w-8 bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm border border-gray-200/50"
+                      title="Edit Assessment"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Bottom Action Bar */}
+                  <div className="border-t border-gray-100 p-3 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
                           setSelectedAssessment(assessment);
                           setIsDeleteDialogOpen(true);
                         }}
-                        className="text-xs text-destructive hover:text-destructive"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 h-auto"
                       >
-                        <Trash2 className="h-3 w-3 mr-1" />
+                        <Trash2 className="h-4 w-4 mr-1.5" />
                         Delete
                       </Button>
-                      <Button variant="outline" size="sm" asChild className="text-xs">
+                      <Button variant="outline" size="sm" asChild className="px-3 py-1.5 h-auto">
                         <Link to={`/results/${assessment.id}`}>
-                          <BarChart className="h-3 w-3 mr-1" />
+                          <BarChart className="h-4 w-4 mr-1.5" />
                           Results
                         </Link>
                       </Button>
