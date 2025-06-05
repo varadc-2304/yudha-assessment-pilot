@@ -464,6 +464,7 @@ export type Database = {
           id: string
           image_url: string | null
           marks: number
+          serial: number | null
           title: string
           topic: string | null
           updated_at: string
@@ -476,6 +477,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           marks?: number
+          serial?: number | null
           title: string
           topic?: string | null
           updated_at?: string
@@ -488,6 +490,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           marks?: number
+          serial?: number | null
           title?: string
           topic?: string | null
           updated_at?: string

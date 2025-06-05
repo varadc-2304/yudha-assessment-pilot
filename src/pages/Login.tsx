@@ -25,7 +25,7 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8 animate-fade-in">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-            <img src="/Yudha.png" alt="Yudha Logo" className="h-10 w-10 object-contain brightness-0 invert" />
+            <div className="h-8 w-8 bg-white rounded-lg"></div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
           <p className="text-muted-foreground mt-2">Sign in to your admin account</p>

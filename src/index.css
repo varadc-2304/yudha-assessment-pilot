@@ -101,8 +101,22 @@
   @apply text-foreground !important;
 }
 
-/* Button hover fixes */
-button:hover:not(.btn-gradient-primary):not([data-destructive]) {
+/* Button hover fixes - prevent turning white on hover */
+button:hover:not(.btn-gradient-primary):not([data-destructive]):not(.text-white) {
+  @apply text-foreground !important;
+}
+
+/* Specific fix for buttons with white text that should stay white */
+button.text-white:hover,
+button[class*="text-white"]:hover,
+.btn-gradient-primary:hover {
+  @apply text-white !important;
+}
+
+/* Fix for outline buttons and secondary buttons */
+button[class*="outline"]:hover,
+button[class*="secondary"]:hover,
+button[class*="ghost"]:hover {
   @apply text-foreground !important;
 }
 

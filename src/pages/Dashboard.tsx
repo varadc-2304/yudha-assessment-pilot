@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, FileText, Users, CheckCircle, TrendingUp, Award, Clock, Target } from "lucide-react";
@@ -84,22 +85,21 @@ const Dashboard: React.FC = () => {
     };
   }, [assessments, results]);
 
-  // Query to fetch recent assessment data for the organization
+  // Query to fetch all assessment data for the organization (removed limit)
   const { data: recentAssessments, isLoading: isLoadingRecent } = useQuery({
-    queryKey: ['organization-recent-assessments', user?.organization],
+    queryKey: ['organization-all-assessments', user?.organization],
     queryFn: async () => {
-      // Fetch the most recent assessments in the organization
-      const { data: recentAssessments, error: assessmentError } = await supabase
+      // Fetch all assessments in the organization
+      const { data: allAssessments, error: assessmentError } = await supabase
         .from('assessments')
         .select('id, name, code')
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order('created_at', { ascending: false });
       
       if (assessmentError) throw assessmentError;
 
       // For each assessment, get submission count and average score
       const assessmentData = await Promise.all(
-        recentAssessments.map(async (assessment) => {
+        allAssessments.map(async (assessment) => {
           const { data: assessmentResults, error: resultsError } = await supabase
             .from('results')
             .select('percentage')
@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
             <div>
               <CardTitle className="text-xl font-semibold">Assessment Analytics</CardTitle>
               <CardDescription className="mt-1">
-                Performance metrics across recent assessments
+                Performance metrics across all assessments
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -311,9 +311,9 @@ const Dashboard: React.FC = () => {
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-semibold">Recent Assessments</CardTitle>
+              <CardTitle className="text-xl font-semibold">All Assessments</CardTitle>
               <CardDescription className="mt-1">
-                Latest performance data across your organization
+                Performance data across your organization
               </CardDescription>
             </div>
             <Clock size={20} className="text-muted-foreground" />
