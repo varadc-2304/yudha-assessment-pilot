@@ -23,14 +23,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/20 to-primary/5 p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-            <div className="h-8 w-8 bg-white rounded-lg"></div>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your admin account</p>
-        </div>
-
         <Card className="border-border/50 shadow-lg backdrop-blur-sm animate-scale-in">
           <CardHeader className="space-y-3 text-center pb-6">
             <CardTitle className="text-2xl font-bold text-foreground">Yudha Admin Portal</CardTitle>
