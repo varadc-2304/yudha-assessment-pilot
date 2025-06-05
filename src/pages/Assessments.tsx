@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Eye, BarChart } from "lucide-react";
@@ -176,80 +177,104 @@ const Assessments: React.FC = () => {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Assessments</h1>
-        <Button className="bg-yudha-600 hover:bg-yudha-700" onClick={() => navigate("/create-assessment")}>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Assessments</h1>
+          <p className="text-muted-foreground mt-1">Manage and monitor your assessment portfolio</p>
+        </div>
+        <Button className="bg-primary hover:bg-primary/90 shadow-lg" onClick={() => navigate("/create-assessment")}>
           <Plus className="mr-2 h-4 w-4" />
           Create Assessment
         </Button>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle>Search Assessments</CardTitle>
+      <Card className="mb-8 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Search Assessments</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Input
-              placeholder="Search by title, code or description..."
-              value={searchTerm}
-              onChange={handleSearch}
-              className="w-full"
-            />
-          </div>
+          <Input
+            placeholder="Search by title, code or description..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="w-full max-w-md"
+          />
         </CardContent>
       </Card>
 
       {isLoading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" />
         </div>
       ) : (
-        <div className="grid gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredAssessments && filteredAssessments.length > 0 ? (
             filteredAssessments.map((assessment) => (
-              <Card key={assessment.id} className="overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="flex-1 p-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-semibold">{assessment.name}</h3>
-                        {getStatusBadge(assessment.status || 'Scheduled')}
+              <Card key={assessment.id} className="group relative overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 aspect-square flex flex-col">
+                <CardContent className="p-6 flex flex-col h-full">
+                  {/* Header Section */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-semibold text-foreground mb-2 truncate" title={assessment.name}>
+                        {assessment.name}
+                      </h3>
+                      {getStatusBadge(assessment.status || 'Scheduled')}
+                    </div>
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="flex-1 space-y-3 mb-4">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Code:</span>{" "}
+                      <span className="font-medium text-foreground">{assessment.code}</span>
+                    </div>
+                    
+                    <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
+                      {assessment.instructions || "No instructions provided."}
+                    </p>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Duration:</span>
+                        <span className="font-medium">{assessment.duration_minutes} min</span>
                       </div>
-                      <p className="text-sm text-gray-500 mb-2">Code: <span className="font-medium">{assessment.code}</span></p>
-                      <p className="text-gray-600 mb-4 line-clamp-2">
-                        {assessment.instructions || "No instructions provided."}
-                      </p>
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Duration:</span>{" "}
-                          <span className="font-medium">{assessment.duration_minutes} min</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Start:</span>{" "}
-                          <span className="font-medium">{formatDate(assessment.start_time)}</span>
-                        </div>
-                        {assessment.end_time && (
-                          <div>
-                            <span className="text-gray-500">End:</span>{" "}
-                            <span className="font-medium">{formatDate(assessment.end_time)}</span>
-                          </div>
-                        )}
-                        {assessment.is_practice && (
-                          <Badge variant="secondary">Practice</Badge>
-                        )}
-                        {assessment.reattempt && (
-                          <Badge variant="secondary">Reattempt Allowed</Badge>
-                        )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Start:</span>
+                        <span className="font-medium text-xs">{formatDate(assessment.start_time)}</span>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-6 flex flex-row md:flex-col justify-between items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleViewAssessment(assessment)}>
-                        <Eye className="h-4 w-4" />
+
+                    <div className="flex flex-wrap gap-1">
+                      {assessment.is_practice && (
+                        <Badge variant="secondary" className="text-xs">Practice</Badge>
+                      )}
+                      {assessment.reattempt && (
+                        <Badge variant="secondary" className="text-xs">Reattempt</Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons Section */}
+                  <div className="mt-auto pt-4 border-t border-border">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewAssessment(assessment)}
+                        className="text-xs"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleEditAssessment(assessment)}>
-                        <Edit className="h-4 w-4" />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleEditAssessment(assessment)}
+                        className="text-xs"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Edit
                       </Button>
                       <Button
                         variant="outline"
@@ -258,12 +283,15 @@ const Assessments: React.FC = () => {
                           setSelectedAssessment(assessment);
                           setIsDeleteDialogOpen(true);
                         }}
+                        className="text-xs text-destructive hover:text-destructive"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="outline" size="sm" asChild className="text-xs">
                         <Link to={`/results/${assessment.id}`}>
-                          <BarChart className="h-4 w-4" />
+                          <BarChart className="h-3 w-3 mr-1" />
+                          Results
                         </Link>
                       </Button>
                     </div>
@@ -272,8 +300,18 @@ const Assessments: React.FC = () => {
               </Card>
             ))
           ) : (
-            <div className="text-center py-10">
-              <p className="text-lg text-gray-500">No assessments found.</p>
+            <div className="col-span-full text-center py-12">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">No assessments found</h3>
+                <p className="text-muted-foreground mb-4">Get started by creating your first assessment.</p>
+                <Button onClick={() => navigate("/create-assessment")}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Assessment
+                </Button>
+              </div>
             </div>
           )}
         </div>
