@@ -102,15 +102,13 @@
 }
 
 /* Button hover fixes - prevent turning white on hover */
-button:hover:not(.btn-gradient-primary):not([data-destructive]):not(.text-white) {
-  @apply text-foreground !important;
+button:hover:not(.btn-gradient-primary):not([data-destructive]) {
+  color: hsl(var(--foreground)) !important;
 }
 
 /* Specific fix for buttons with white text that should stay white */
-button.text-white:hover,
-button[class*="text-white"]:hover,
 .btn-gradient-primary:hover {
-  @apply text-white !important;
+  color: white !important;
 }
 
 /* Fix for outline buttons and secondary buttons */
@@ -332,7 +330,7 @@ button[class*="ghost"]:hover {
 }
 
 .glass-dark {
-  @apply bg-black/10 backdrop-blur-lg border border-black/20;
+  @apply bg-black/10 backdrop-blur-lg border border-border/20;
 }
 
 /* Professional Grid Layout */
