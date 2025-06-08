@@ -25,9 +25,9 @@ const Login = () => {
       <div className="w-full max-w-md">
         <Card className="border-border/50 shadow-lg backdrop-blur-sm animate-scale-in">
           <CardHeader className="space-y-3 text-center pb-6">
-            <CardTitle className="text-2xl font-bold text-foreground">Yudha Admin Portal</CardTitle>
+            <CardTitle className="text-2xl font-bold text-foreground">Admin Portal</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Access your assessment management dashboard
+              Ikshvaku Innovations
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
