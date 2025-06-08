@@ -94,7 +94,7 @@ const Login = () => {
         </Card>
 
         <div className="text-center mt-6 text-sm text-muted-foreground animate-fade-in">
-          <p>Secure admin access • Yudha Assessment Platform</p>
+
         </div>
       </div>
     </div>
