@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,9 @@ const Users: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
 
+  console.log('Current user in Users page:', user);
+  console.log('User organization_id:', user?.organization_id);
+
   const createForm = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -59,6 +63,8 @@ const Users: React.FC = () => {
   const { data: users, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['organization-admin-users', user?.organization_id],
     queryFn: async () => {
+      console.log('Fetching admin users for organization_id:', user?.organization_id);
+      
       const { data, error } = await supabase
         .from('auth')
         .select('*')
@@ -66,15 +72,24 @@ const Users: React.FC = () => {
         .eq('role', 'admin')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      console.log('Admin users query result:', { data, error });
+      
+      if (error) {
+        console.error('Error fetching admin users:', error);
+        throw error;
+      }
       return data;
     },
     enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
   });
 
+  console.log('Fetched users:', users);
+
   // Create admin user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: UserFormData) => {
+      console.log('Creating user with organization_id:', user?.organization_id);
+      
       const { data, error } = await supabase
         .from('auth')
         .insert([
@@ -89,6 +104,8 @@ const Users: React.FC = () => {
         .select()
         .single();
 
+      console.log('Create user result:', { data, error });
+
       if (error) throw error;
       return data;
     },
@@ -102,6 +119,7 @@ const Users: React.FC = () => {
       });
     },
     onError: (error: any) => {
+      console.error('Create user error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create admin user",
@@ -345,6 +363,7 @@ const Users: React.FC = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Organization ID</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -359,6 +378,7 @@ const Users: React.FC = () => {
                           admin
                         </span>
                       </TableCell>
+                      <TableCell className="text-xs text-gray-500">{userData.organization_id}</TableCell>
                       <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -386,6 +406,9 @@ const Users: React.FC = () => {
             ) : (
               <div className="text-center py-6">
                 <p className="text-gray-500">No admin users found in your organization.</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Current organization ID: {user?.organization_id || 'Not set'}
+                </p>
               </div>
             )}
           </div>
