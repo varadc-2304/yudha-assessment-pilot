@@ -40,6 +40,24 @@ const Users: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
 
+  // Form hooks
+  const createForm = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      name: "",
+    },
+  });
+
+  const editForm = useForm<EditUserFormData>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      email: "",
+      name: "",
+    },
+  });
+
   console.log('Current user in Users page:', user);
   console.log('User organization_id:', user?.organization_id);
 
