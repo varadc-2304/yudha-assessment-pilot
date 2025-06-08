@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -71,70 +72,53 @@ const CodingQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
-  // Fetch all organization assessments for dropdown - now includes all organization admins
-  const { data: orgAssessments } = useQuery({
-    queryKey: ['org-assessments-for-questions', user?.organization],
+  // Fetch organization and its assigned assessments
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
-      // Get all users with admin role in the same organization
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('role', 'admin')
-        .eq('organization', user?.organization);
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
       
-      if (adminError) throw adminError;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
+  });
+
+  // Fetch only assigned assessments for the organization
+  const { data: orgAssessments } = useQuery({
+    queryKey: ['org-assessments-for-questions', user?.organization_id, organization?.assigned_assessments_code],
+    queryFn: async () => {
+      const assignedCodes = organization?.assigned_assessments_code || [];
       
-      if (!adminUsers || adminUsers.length === 0) {
+      if (assignedCodes.length === 0) {
         return [];
       }
-      
-      const adminIds = adminUsers.map(admin => admin.id);
-      
-      // Get assessments created by any admin in the organization
+
       const { data, error } = await supabase
         .from('assessments')
         .select('id, name, code, created_by')
-        .in('created_by', adminIds)
+        .in('code', assignedCodes)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin' && !!organization
   });
 
-  // Fetch coding questions with their related data - now includes all organization assessments
+  // Fetch coding questions with their related data - only for assigned assessments
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['coding-questions', user?.organization],
+    queryKey: ['coding-questions', user?.organization_id, orgAssessments],
     queryFn: async () => {
-      // Get all users with admin role in the same organization
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('role', 'admin')
-        .eq('organization', user?.organization);
-      
-      if (adminError) throw adminError;
-      
-      if (!adminUsers || adminUsers.length === 0) {
+      if (!orgAssessments || orgAssessments.length === 0) {
         return [];
       }
       
-      const adminIds = adminUsers.map(admin => admin.id);
-      
-      // First, get the assessments created by admins in this organization
-      const { data: adminAssessments, error: assessmentsError } = await supabase
-        .from('assessments')
-        .select('id')
-        .in('created_by', adminIds);
-      
-      if (assessmentsError) throw assessmentsError;
-      
-      if (!adminAssessments || adminAssessments.length === 0) {
-        return []; // No assessments created by organization admins
-      }
-      
-      const assessmentIds = adminAssessments.map(a => a.id);
+      const assessmentIds = orgAssessments.map(a => a.id);
       
       // Now get coding questions for these assessments
       const { data: codingQuestions, error: questionsError } = await supabase
@@ -146,7 +130,7 @@ const CodingQuestions: React.FC = () => {
       if (questionsError) throw questionsError;
       
       if (!codingQuestions || codingQuestions.length === 0) {
-        return []; // No coding questions for this organization's assessments
+        return [];
       }
 
       // For each question, fetch its related data
@@ -187,16 +171,9 @@ const CodingQuestions: React.FC = () => {
         })
       );
 
-      // Also fetch assessment names to display
-      const { data: assessments } = await supabase
-        .from('assessments')
-        .select('id, name, code')
-        .in('id', assessmentIds);
-      
+      // Create assessment map for display
       const assessmentMap = new Map();
-      if (assessments) {
-        assessments.forEach(a => assessmentMap.set(a.id, { name: a.name, code: a.code }));
-      }
+      orgAssessments.forEach(a => assessmentMap.set(a.id, { name: a.name, code: a.code }));
 
       // Calculate total marks
       const calculateTotalMarks = (testCases: any[]) => {
@@ -238,44 +215,12 @@ const CodingQuestions: React.FC = () => {
         };
       });
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin' && !!orgAssessments
   });
 
   // Delete coding question mutation
   const deleteQuestionMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Check if this question belongs to an assessment created by an admin in this organization
-      const { data: question, error: questionError } = await supabase
-        .from('coding_questions')
-        .select('assessment_id')
-        .eq('id', id)
-        .single();
-      
-      if (questionError) throw questionError;
-      
-      // Verify assessment ownership within organization
-      const { data: assessment, error: assessmentError } = await supabase
-        .from('assessments')
-        .select('created_by')
-        .eq('id', question.assessment_id)
-        .single();
-      
-      if (assessmentError) throw assessmentError;
-      
-      // Check if the assessment creator is an admin in the same organization
-      const { data: creator, error: creatorError } = await supabase
-        .from('auth')
-        .select('role, organization')
-        .eq('id', assessment.created_by)
-        .single();
-      
-      if (creatorError) throw creatorError;
-      
-      if (creator.role !== 'admin' || creator.organization !== user?.organization) {
-        throw new Error("You don't have permission to delete this question");
-      }
-      
-      // Delete the coding question (cascade will delete related data)
       const { error } = await supabase
         .from('coding_questions')
         .delete()
@@ -522,43 +467,7 @@ const CodingQuestions: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Test Cases */}
-                  {question.testCases && question.testCases.length > 0 && (
-                    <div className="mb-4 space-y-3">
-                      <h3 className="font-medium text-gray-900">Test Cases:</h3>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {question.testCases.filter(tc => !tc.isHidden).map((testCase, index) => (
-                          <div key={testCase.id} className="border rounded-md p-3">
-                            <div className="flex justify-between mb-2">
-                              <span className="font-medium">Test Case {index + 1}</span>
-                              <Badge>{testCase.marks} {testCase.marks === 1 ? 'mark' : 'marks'}</Badge>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-700">Input:</div>
-                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 mb-2 overflow-auto max-h-20">
-                                {testCase.input}
-                              </pre>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-700">Expected Output:</div>
-                              <pre className="text-xs bg-gray-50 p-2 rounded mt-1 overflow-auto max-h-20">
-                                {testCase.output}
-                              </pre>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Hidden Test Cases Count */}
-                      {question.testCases.some(tc => tc.isHidden) && (
-                        <div className="text-sm text-gray-600">
-                          + {question.testCases.filter(tc => tc.isHidden).length} hidden test {question.testCases.filter(tc => tc.isHidden).length === 1 ? 'case' : 'cases'}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
+
                   <div className="flex justify-end gap-2 mt-4">
                     <Button 
                       variant="outline" 
@@ -586,7 +495,7 @@ const CodingQuestions: React.FC = () => {
             ))
           ) : (
             <div className="text-center py-10">
-              <p className="text-lg text-gray-500">No coding questions found.</p>
+              <p className="text-lg text-gray-500">No questions found for assigned assessments.</p>
             </div>
           )}
         </div>
@@ -600,7 +509,7 @@ const CodingQuestions: React.FC = () => {
           </DialogHeader>
           <div className="py-4">
             <p>
-              Are you sure you want to delete this coding question? This action cannot be undone.
+              Are you sure you want to delete this question? This action cannot be undone.
             </p>
           </div>
           <div className="flex justify-end gap-3">

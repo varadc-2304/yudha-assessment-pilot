@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -34,41 +35,82 @@ const Results: React.FC = () => {
   const [askAIOpen, setAskAIOpen] = useState(false);
   const { user } = useAuth();
 
-  // First, fetch all assessments in the organization
-  const { data: orgAssessments, isLoading: isLoadingAssessments } = useQuery({
-    queryKey: ['org-assessments', user?.organization],
+  // First, fetch organization and its assigned assessments
+  const { data: organization, isLoading: isLoadingOrg } = useQuery({
+    queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('assessments')
-        .select('id, name, code');
+        .from('organizations')
+        .select('assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
   });
 
-  // Fetch results data
-  const { data: results, isLoading, error } = useQuery({
-    queryKey: ['results', assessmentId, user?.organization],
+  // Fetch assigned assessments
+  const { data: orgAssessments, isLoading: isLoadingAssessments } = useQuery({
+    queryKey: ['org-assessments', user?.organization_id, organization?.assigned_assessments_code],
     queryFn: async () => {
-      // If specific assessment ID is provided, use it; otherwise fetch for all org assessments
+      const assignedCodes = organization?.assigned_assessments_code || [];
+      
+      if (assignedCodes.length === 0) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, name, code')
+        .in('code', assignedCodes);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!organization
+  });
+
+  // Fetch results data for assigned assessments only
+  const { data: results, isLoading, error } = useQuery({
+    queryKey: ['results', assessmentId, user?.organization_id, orgAssessments],
+    queryFn: async () => {
+      if (!orgAssessments || orgAssessments.length === 0) {
+        return [];
+      }
+
+      // If specific assessment ID is provided, verify it's in assigned assessments
       let assessmentIds: string[] = [];
       
       if (assessmentId) {
-        // Verify this assessment is in the organization
-        if (orgAssessments && orgAssessments.some(a => a.id === assessmentId)) {
+        if (orgAssessments.some(a => a.id === assessmentId)) {
           assessmentIds = [assessmentId];
         } else {
-          return []; // Assessment not in organization
+          return []; // Assessment not in assigned list
         }
       } else {
-        assessmentIds = orgAssessments?.map(a => a.id) || [];
+        assessmentIds = orgAssessments.map(a => a.id);
       }
       
       if (assessmentIds.length === 0) {
         return [];
       }
+      
+      // Get organization students only
+      const { data: orgStudents, error: studentsError } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('organization_id', user?.organization_id)
+        .eq('role', 'student');
+      
+      if (studentsError) throw studentsError;
+      
+      if (!orgStudents || orgStudents.length === 0) {
+        return [];
+      }
+      
+      const studentIds = orgStudents.map(s => s.id);
       
       let query = supabase.from('results').select(`
         id,
@@ -83,7 +125,8 @@ const Results: React.FC = () => {
         assessments(name, code),
         auth(name, email, prn, department)
       `)
-      .in('assessment_id', assessmentIds);
+      .in('assessment_id', assessmentIds)
+      .in('user_id', studentIds);
       
       const { data, error } = await query.order('completed_at', { ascending: false });
       
@@ -109,14 +152,18 @@ const Results: React.FC = () => {
         }
       }));
     },
-    enabled: !!user?.id && user?.role === 'admin' && (!!assessmentId || (!!orgAssessments && orgAssessments.length > 0))
+    enabled: !!user?.id && user?.role === 'admin' && !!orgAssessments && orgAssessments.length > 0
   });
 
   // Fetch assessment details if assessmentId is provided
   const { data: assessmentDetails } = useQuery({
-    queryKey: ['assessment-details', assessmentId],
+    queryKey: ['assessment-details', assessmentId, orgAssessments],
     queryFn: async () => {
-      if (!assessmentId) return null;
+      if (!assessmentId || !orgAssessments) return null;
+      
+      // Verify the assessment is in the assigned list
+      const assessment = orgAssessments.find(a => a.id === assessmentId);
+      if (!assessment) return null;
       
       const { data, error } = await supabase
         .from('assessments')
@@ -127,7 +174,7 @@ const Results: React.FC = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!assessmentId && !!user?.id && user?.role === 'admin'
+    enabled: !!assessmentId && !!user?.id && user?.role === 'admin' && !!orgAssessments
   });
 
   // Filter results based on search term
@@ -217,7 +264,7 @@ const Results: React.FC = () => {
     );
   }
 
-  if (isLoading || isLoadingAssessments) {
+  if (isLoading || isLoadingAssessments || isLoadingOrg) {
     return (
       <div className="flex justify-center items-center h-64">
         <LoadingSpinner size="lg" />
@@ -231,7 +278,7 @@ const Results: React.FC = () => {
         <h1 className="text-2xl font-bold">
           {assessmentId && assessmentDetails 
             ? `Results: ${assessmentDetails.name} (${assessmentDetails.code})`
-            : "All Results"
+            : "Organization Results"
           }
         </h1>
         <div className="flex gap-3">
@@ -420,7 +467,7 @@ const Results: React.FC = () => {
                 ) : (
                   <tr>
                     <td colSpan={assessmentId ? 5 : 6} className="text-center py-8">
-                      <p className="text-gray-500">No results found.</p>
+                      <p className="text-gray-500">No results found for organization students.</p>
                     </td>
                   </tr>
                 )}

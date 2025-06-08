@@ -542,6 +542,7 @@ export type Database = {
           description: string | null
           difficulty: string | null
           id: string
+          sr: number | null
           title: string | null
           updated_at: string | null
         }
@@ -550,6 +551,7 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           id: string
+          sr?: number | null
           title?: string | null
           updated_at?: string | null
         }
@@ -558,6 +560,7 @@ export type Database = {
           description?: string | null
           difficulty?: string | null
           id?: string
+          sr?: number | null
           title?: string | null
           updated_at?: string | null
         }

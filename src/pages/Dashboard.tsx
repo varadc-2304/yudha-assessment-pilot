@@ -11,24 +11,47 @@ import { useAuth } from "@/contexts/AuthContext";
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
-  // Query to fetch all assessments in the organization
-  const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
-    queryKey: ['organization-assessments', user?.organization],
+  // Query to fetch organization and its assigned assessments
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
+  });
+
+  // Query to fetch only assigned assessments
+  const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
+    queryKey: ['organization-assessments', user?.organization_id, organization?.assigned_assessments_code],
+    queryFn: async () => {
+      const assignedCodes = organization?.assigned_assessments_code || [];
+      
+      if (assignedCodes.length === 0) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
+        .in('code', assignedCodes)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!organization
   });
 
-  // Query to fetch results for all assessments in the organization
+  // Query to fetch results for assigned assessments only
   const { data: results, isLoading: isLoadingResults } = useQuery({
-    queryKey: ['organization-results', user?.organization],
+    queryKey: ['organization-results', user?.organization_id, assessments],
     queryFn: async () => {
       if (!assessments || assessments.length === 0) return [];
       
@@ -85,21 +108,17 @@ const Dashboard: React.FC = () => {
     };
   }, [assessments, results]);
 
-  // Query to fetch all assessment data for the organization (removed limit)
+  // Query to fetch assessment analytics for assigned assessments only
   const { data: recentAssessments, isLoading: isLoadingRecent } = useQuery({
-    queryKey: ['organization-all-assessments', user?.organization],
+    queryKey: ['organization-all-assessments', user?.organization_id, assessments],
     queryFn: async () => {
-      // Fetch all assessments in the organization
-      const { data: allAssessments, error: assessmentError } = await supabase
-        .from('assessments')
-        .select('id, name, code')
-        .order('created_at', { ascending: false });
+      if (!assessments || assessments.length === 0) {
+        return [];
+      }
       
-      if (assessmentError) throw assessmentError;
-
-      // For each assessment, get submission count and average score
+      // For each assigned assessment, get submission count and average score
       const assessmentData = await Promise.all(
-        allAssessments.map(async (assessment) => {
+        assessments.map(async (assessment) => {
           const { data: assessmentResults, error: resultsError } = await supabase
             .from('results')
             .select('percentage')
@@ -123,7 +142,7 @@ const Dashboard: React.FC = () => {
       
       return assessmentData;
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!assessments && assessments.length > 0
   });
 
   // Generate chart data based on recent assessments
@@ -154,7 +173,7 @@ const Dashboard: React.FC = () => {
     {
       title: "Total Assessments",
       value: stats.totalAssessments,
-      description: "Active assessment templates",
+      description: "Assigned assessment templates",
       icon: FileText,
       gradient: "from-blue-500 to-blue-600",
       change: "+12%"
@@ -162,7 +181,7 @@ const Dashboard: React.FC = () => {
     {
       title: "Total Submissions",
       value: stats.totalSubmissions,
-      description: "Across all assessments",
+      description: "Across assigned assessments",
       icon: Users,
       gradient: "from-green-500 to-green-600",
       change: "+18%"
@@ -229,7 +248,7 @@ const Dashboard: React.FC = () => {
             <div>
               <CardTitle className="text-xl font-semibold">Assessment Analytics</CardTitle>
               <CardDescription className="mt-1">
-                Performance metrics across all assessments
+                Performance metrics across assigned assessments
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -298,7 +317,7 @@ const Dashboard: React.FC = () => {
                 <BarChart size={48} className="text-muted-foreground/50" />
                 <div className="text-center">
                   <p className="text-muted-foreground font-medium">No assessment data available</p>
-                  <p className="text-sm text-muted-foreground/70">Create assessments to see analytics</p>
+                  <p className="text-sm text-muted-foreground/70">Assigned assessments will appear here</p>
                 </div>
               </div>
             )}
@@ -311,9 +330,9 @@ const Dashboard: React.FC = () => {
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-semibold">All Assessments</CardTitle>
+              <CardTitle className="text-xl font-semibold">Assigned Assessments</CardTitle>
               <CardDescription className="mt-1">
-                Performance data across your organization
+                Performance data for your organization's assessments
               </CardDescription>
             </div>
             <Clock size={20} className="text-muted-foreground" />
@@ -368,8 +387,8 @@ const Dashboard: React.FC = () => {
             <div className="text-center py-12 space-y-4">
               <FileText size={48} className="mx-auto text-muted-foreground/50" />
               <div>
-                <p className="text-muted-foreground font-medium">No assessment data available</p>
-                <p className="text-sm text-muted-foreground/70">Create your first assessment to get started</p>
+                <p className="text-muted-foreground font-medium">No assigned assessments available</p>
+                <p className="text-sm text-muted-foreground/70">Contact your administrator to assign assessments</p>
               </div>
             </div>
           )}

@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,65 +59,48 @@ const MCQQuestions: React.FC = () => {
   const [showBankSelector, setShowBankSelector] = useState(false);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
 
-  // Fetch all organization assessments for dropdown - now includes all organization admins
-  const { data: orgAssessments } = useQuery({
-    queryKey: ['org-assessments-for-questions', user?.organization],
+  // Fetch organization and its assigned assessments
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
-      // Get all users with admin role in the same organization
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('role', 'admin')
-        .eq('organization', user?.organization);
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
       
-      if (adminError) throw adminError;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
+  });
+
+  // Fetch only assigned assessments for the organization
+  const { data: orgAssessments } = useQuery({
+    queryKey: ['org-assessments-for-questions', user?.organization_id, organization?.assigned_assessments_code],
+    queryFn: async () => {
+      const assignedCodes = organization?.assigned_assessments_code || [];
       
-      if (!adminUsers || adminUsers.length === 0) {
+      if (assignedCodes.length === 0) {
         return [];
       }
-      
-      const adminIds = adminUsers.map(admin => admin.id);
-      
-      // Get assessments created by any admin in the organization
+
       const { data, error } = await supabase
         .from('assessments')
         .select('id, name, code, created_by')
-        .in('created_by', adminIds)
+        .in('code', assignedCodes)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin' && !!organization
   });
 
-  // Fetch MCQ questions with their options - now includes all organization assessments
+  // Fetch MCQ questions with their options - only for assigned assessments
   const { data: questions, isLoading, error } = useQuery({
-    queryKey: ['mcq-questions', user?.organization],
+    queryKey: ['mcq-questions', user?.organization_id, orgAssessments],
     queryFn: async () => {
-      // Get all users with admin role in the same organization
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('role', 'admin')
-        .eq('organization', user?.organization);
-      
-      if (adminError) throw adminError;
-      
-      if (!adminUsers || adminUsers.length === 0) {
-        return [];
-      }
-      
-      const adminIds = adminUsers.map(admin => admin.id);
-      
-      // Get all assessments created by admins in the organization
-      const { data: orgAssessments, error: assessmentsError } = await supabase
-        .from('assessments')
-        .select('id')
-        .in('created_by', adminIds);
-      
-      if (assessmentsError) throw assessmentsError;
-      
       if (!orgAssessments || orgAssessments.length === 0) {
         return [];
       }
@@ -154,16 +138,9 @@ const MCQQuestions: React.FC = () => {
         })
       );
 
-      // Also fetch assessment names to display
-      const { data: assessments } = await supabase
-        .from('assessments')
-        .select('id, name, code')
-        .in('id', assessmentIds);
-      
+      // Create assessment map for display
       const assessmentMap = new Map();
-      if (assessments) {
-        assessments.forEach(a => assessmentMap.set(a.id, { name: a.name, code: a.code }));
-      }
+      orgAssessments.forEach(a => assessmentMap.set(a.id, { name: a.name, code: a.code }));
 
       // Map database questions to the format expected by the UI
       return questionsWithOptions.map((q: DatabaseMCQQuestion) => ({
@@ -182,7 +159,7 @@ const MCQQuestions: React.FC = () => {
         }))
       }));
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin' && !!orgAssessments
   });
 
   // Delete MCQ question mutation
@@ -445,7 +422,7 @@ const MCQQuestions: React.FC = () => {
             ))
           ) : (
             <div className="text-center py-10">
-              <p className="text-lg text-gray-500">No questions found.</p>
+              <p className="text-lg text-gray-500">No questions found for assigned assessments.</p>
             </div>
           )}
         </div>
