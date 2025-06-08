@@ -516,7 +516,6 @@ const Users: React.FC = () => {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Organization ID</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -531,7 +530,6 @@ const Users: React.FC = () => {
                           admin
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs text-gray-500">{userData.organization_id}</TableCell>
                       <TableCell>{new Date(userData.created_at).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -587,9 +585,6 @@ const Users: React.FC = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>PRN</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Year</TableHead>
                     <TableHead>Assigned Learning Paths</TableHead>
                     <TableHead>Assigned Assessments</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -600,9 +595,6 @@ const Users: React.FC = () => {
                     <TableRow key={student.id}>
                       <TableCell className="font-medium">{student.name || '-'}</TableCell>
                       <TableCell>{student.email}</TableCell>
-                      <TableCell>{student.prn || '-'}</TableCell>
-                      <TableCell>{student.department || '-'}</TableCell>
-                      <TableCell>{student.year || '-'}</TableCell>
                       <TableCell>
                         <span className="text-xs text-gray-600">
                           {(student.assigned_learning_paths || []).length} paths
