@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import AssessmentConstraints from "@/components/assessment/AssessmentConstraints";
 import { Sparkles } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const assessmentSchema = z.object({
   name: z.string().min(3, { message: "Assessment name must be at least 3 characters" }),
@@ -43,6 +43,7 @@ const CreateAssessment: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [constraints, setConstraints] = useState<AssessmentConstraint[]>([]);
   const [generateWithAI, setGenerateWithAI] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -78,7 +79,7 @@ const CreateAssessment: React.FC = () => {
       }
 
       // Get current user to set as creator
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
       
       // Convert form timestamps to proper ISO format
       const startTime = new Date(values.start_time).toISOString();
@@ -103,6 +104,34 @@ const CreateAssessment: React.FC = () => {
         .single();
 
       if (error) throw error;
+
+      // Add assessment code to organization's assigned assessments
+      if (user?.organization_id) {
+        // First get current assigned assessments
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select('assigned_assessments_code')
+          .eq('id', user.organization_id)
+          .single();
+
+        if (orgError) {
+          console.error("Error fetching organization:", orgError);
+        } else {
+          const currentAssessments = orgData.assigned_assessments_code || [];
+          const updatedAssessments = [...currentAssessments, values.code];
+          
+          const { error: updateOrgError } = await supabase
+            .from('organizations')
+            .update({
+              assigned_assessments_code: updatedAssessments
+            })
+            .eq('id', user.organization_id);
+
+          if (updateOrgError) {
+            console.error("Error updating organization assessments:", updateOrgError);
+          }
+        }
+      }
 
       // Insert constraints if dynamic assessment
       if (values.is_dynamic && constraints.length > 0) {
@@ -157,6 +186,7 @@ const CreateAssessment: React.FC = () => {
       
       // Invalidate assessments query to trigger refetch
       queryClient.invalidateQueries({ queryKey: ['assessments'] });
+      queryClient.invalidateQueries({ queryKey: ['organization'] });
       navigate("/assessments");
     } catch (error: any) {
       console.error("Error creating assessment:", error);

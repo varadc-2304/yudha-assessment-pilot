@@ -31,19 +31,42 @@ const Assessments: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch assessments from Supabase - all assessments within the organization
-  const { data: assessments, isLoading, error } = useQuery({
-    queryKey: ['assessments', user?.organization],
+  // Fetch organization details to get assigned assessments
+  const { data: organization } = useQuery({
+    queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.organization_id && user?.role === 'admin'
+  });
+
+  // Fetch assessments from Supabase - only assigned assessments for the organization
+  const { data: assessments, isLoading, error } = useQuery({
+    queryKey: ['assessments', user?.organization_id, organization?.assigned_assessments_code],
+    queryFn: async () => {
+      const assignedCodes = organization?.assigned_assessments_code || [];
+      
+      if (assignedCodes.length === 0) {
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('assessments')
         .select('*')
+        .in('code', assignedCodes)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Assessment[];
     },
-    enabled: !!user?.id && user?.role === 'admin'
+    enabled: !!user?.id && user?.role === 'admin' && !!organization
   });
 
   // Delete assessment mutation
@@ -149,8 +172,7 @@ const Assessments: React.FC = () => {
   // Filter assessments based on search term
   const filteredAssessments = assessments?.filter(assessment =>
     assessment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assessment.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (assessment.instructions && assessment.instructions.toLowerCase().includes(searchTerm.toLowerCase()))
+    assessment.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString: string) => {
@@ -193,7 +215,7 @@ const Assessments: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Input
-            placeholder="Search by title, code or description..."
+            placeholder="Search by title or code..."
             value={searchTerm}
             onChange={handleSearch}
             className="w-full max-w-md"

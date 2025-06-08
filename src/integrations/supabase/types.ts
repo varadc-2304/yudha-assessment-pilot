@@ -9,6 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      articles: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          question_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at: string
+          id?: string
+          question_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessment_constraints: {
         Row: {
           assessment_id: string
@@ -111,46 +143,132 @@ export type Database = {
       }
       auth: {
         Row: {
+          assigned_assessments: string[] | null
+          assigned_learning_paths: string[] | null
           batch: string | null
+          course: string | null
           created_at: string
           department: string | null
           division: string | null
           email: string
+          grad_year: string | null
           id: string
           name: string | null
           organization: string | null
+          organization_id: string | null
           password: string
           prn: string | null
           role: string
+          updated_at: string | null
+          username: string | null
           year: string | null
         }
         Insert: {
+          assigned_assessments?: string[] | null
+          assigned_learning_paths?: string[] | null
           batch?: string | null
+          course?: string | null
           created_at?: string
           department?: string | null
           division?: string | null
           email: string
+          grad_year?: string | null
           id?: string
           name?: string | null
           organization?: string | null
+          organization_id?: string | null
           password: string
           prn?: string | null
           role?: string
+          updated_at?: string | null
+          username?: string | null
           year?: string | null
         }
         Update: {
+          assigned_assessments?: string[] | null
+          assigned_learning_paths?: string[] | null
           batch?: string | null
+          course?: string | null
           created_at?: string
           department?: string | null
           division?: string | null
           email?: string
+          grad_year?: string | null
           id?: string
           name?: string | null
           organization?: string | null
+          organization_id?: string | null
           password?: string
           prn?: string | null
           role?: string
+          updated_at?: string | null
+          username?: string | null
           year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auto_login_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          used: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token: string
+          used?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      badge_types: {
+        Row: {
+          background_color: string | null
+          created_at: string | null
+          description: string | null
+          icon_name: string | null
+          id: string
+          name: string
+          text_color: string | null
+        }
+        Insert: {
+          background_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id: string
+          name: string
+          text_color?: string | null
+        }
+        Update: {
+          background_color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon_name?: string | null
+          id?: string
+          name?: string
+          text_color?: string | null
         }
         Relationships: []
       }
@@ -388,6 +506,63 @@ export type Database = {
           },
         ]
       }
+      contact_submissions: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          message: string | null
+          name: string
+          status: string | null
+          subject: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          status?: string | null
+          subject?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          status?: string | null
+          subject?: string | null
+        }
+        Relationships: []
+      }
+      learning_paths: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          id: string
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mcq_options: {
         Row: {
           created_at: string
@@ -549,6 +724,36 @@ export type Database = {
           },
         ]
       }
+      organizations: {
+        Row: {
+          assigned_assessments_code: string[] | null
+          assigned_learning_paths: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_assessments_code?: string[] | null
+          assigned_learning_paths?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_assessments_code?: string[] | null
+          assigned_learning_paths?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       proctoring_sessions: {
         Row: {
           assessment_id: string
@@ -609,6 +814,65 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          bio: string | null
+          cgpa: number | null
+          college_name: string | null
+          created_at: string | null
+          gfg_url: string | null
+          github_url: string | null
+          hackerrank_url: string | null
+          id: string
+          leetcode_url: string | null
+          linkedin_url: string | null
+          location: string | null
+          profile_picture_url: string | null
+          real_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bio?: string | null
+          cgpa?: number | null
+          college_name?: string | null
+          created_at?: string | null
+          gfg_url?: string | null
+          github_url?: string | null
+          hackerrank_url?: string | null
+          id: string
+          leetcode_url?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          profile_picture_url?: string | null
+          real_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bio?: string | null
+          cgpa?: number | null
+          college_name?: string | null
+          created_at?: string | null
+          gfg_url?: string | null
+          github_url?: string | null
+          hackerrank_url?: string | null
+          id?: string
+          leetcode_url?: string | null
+          linkedin_url?: string | null
+          location?: string | null
+          profile_picture_url?: string | null
+          real_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "auth"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_submissions: {
         Row: {
           code_solution: string | null
@@ -655,6 +919,50 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          created_at: string | null
+          difficulty: string | null
+          id: string
+          practice_link: string | null
+          question_id: string | null
+          solution_link: string | null
+          title: string | null
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty?: string | null
+          id: string
+          practice_link?: string | null
+          question_id?: string | null
+          solution_link?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: string | null
+          id?: string
+          practice_link?: string | null
+          question_id?: string | null
+          solution_link?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -856,6 +1164,74 @@ export type Database = {
           },
         ]
       }
+      topics: {
+        Row: {
+          created_at: string | null
+          id: string
+          learning_path_id: string | null
+          name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          learning_path_id?: string | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          learning_path_id?: string | null
+          name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topics_learning_path_id_fkey"
+            columns: ["learning_path_id"]
+            isOneToOne: false
+            referencedRelation: "learning_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string | null
+          id: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badge_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_code_snippets: {
         Row: {
           assessment_id: string
@@ -863,6 +1239,7 @@ export type Database = {
           created_at: string | null
           id: string
           language: string
+          last_submitted_at: string | null
           question_id: string
           updated_at: string | null
           user_id: string
@@ -873,6 +1250,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           language: string
+          last_submitted_at?: string | null
           question_id: string
           updated_at?: string | null
           user_id: string
@@ -883,6 +1261,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           language?: string
+          last_submitted_at?: string | null
           question_id?: string
           updated_at?: string | null
           user_id?: string
@@ -896,6 +1275,122 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_progress: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_completed: boolean
+          is_marked_for_revision: boolean
+          question_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_completed?: boolean
+          is_marked_for_revision?: boolean
+          question_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean
+          is_marked_for_revision?: boolean
+          question_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_progress_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_skills: {
+        Row: {
+          created_at: string | null
+          id: string
+          skill_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          skill_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          skill_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "auth"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          assigned_learning_paths: string[] | null
+          course: string | null
+          created_at: string | null
+          department: string | null
+          email: string | null
+          grad_year: string | null
+          id: string
+          password: string | null
+          prn: string | null
+          updated_at: string | null
+          username: string | null
+        }
+        Insert: {
+          assigned_learning_paths?: string[] | null
+          course?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          grad_year?: string | null
+          id: string
+          password?: string | null
+          prn?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Update: {
+          assigned_learning_paths?: string[] | null
+          course?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          grad_year?: string | null
+          id?: string
+          password?: string | null
+          prn?: string | null
+          updated_at?: string | null
+          username?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -915,6 +1410,18 @@ export type Database = {
       }
     }
     Functions: {
+      authenticate_user: {
+        Args: { prn_input: string; password_input: string }
+        Returns: {
+          id: string
+          username: string
+          prn: string
+          email: string
+          department: string
+          course: string
+          grad_year: number
+        }[]
+      }
       calculate_assessment_total_marks: {
         Args: { assessment_id: string }
         Returns: number
@@ -940,6 +1447,20 @@ export type Database = {
           p_examples: Json[]
           p_test_cases: Json[]
         }
+        Returns: undefined
+      }
+      save_user_code: {
+        Args: {
+          p_user_id: string
+          p_assessment_id: string
+          p_question_id: string
+          p_language: string
+          p_code: string
+        }
+        Returns: undefined
+      }
+      update_user_progress_on_success: {
+        Args: { p_user_id: string; p_question_id: string }
         Returns: undefined
       }
     }

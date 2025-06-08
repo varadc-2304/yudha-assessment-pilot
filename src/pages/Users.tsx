@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,21 +55,21 @@ const Users: React.FC = () => {
     },
   });
 
-  // Query to fetch only admin users in the organization
+  // Query to fetch only admin users in the organization using organization_id
   const { data: users, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['organization-admin-users', user?.organization],
+    queryKey: ['organization-admin-users', user?.organization_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('auth')
         .select('*')
-        .eq('organization', user?.organization)
+        .eq('organization_id', user?.organization_id)
         .eq('role', 'admin')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
   });
 
   // Create admin user mutation
@@ -84,7 +83,7 @@ const Users: React.FC = () => {
             password: userData.password,
             name: userData.name,
             role: 'admin', // Force admin role
-            organization: user?.organization,
+            organization_id: user?.organization_id,
           }
         ])
         .select()
