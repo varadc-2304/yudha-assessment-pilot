@@ -66,8 +66,8 @@ const Header: React.FC = () => {
           {/* Title Section */}
           <div className="flex items-center space-x-4">
             <div>
-              <h1 className="text-xl font-bold text-foreground">Yudha Admin</h1>
-              <p className="text-xs text-muted-foreground">Assessment Platform</p>
+              <h1 className="text-xl font-bold text-foreground">Admin Portal</h1>
+              <p className="text-xs text-muted-foreground">Ikshvaku Innovations</p>
             </div>
           </div>
 
