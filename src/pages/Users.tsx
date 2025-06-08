@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Plus, Edit, Trash2, Users as UsersIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Edit, Trash2, Users as UsersIcon, BookOpen, FileText, ChevronDown } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,20 +43,144 @@ const Users: React.FC = () => {
   console.log('Current user in Users page:', user);
   console.log('User organization_id:', user?.organization_id);
 
-  const createForm = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      name: "",
+  // Query to fetch organization data to get assigned learning paths and assessments
+  const { data: organizationData } = useQuery({
+    queryKey: ['organization-data', user?.organization_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('assigned_learning_paths, assigned_assessments_code')
+        .eq('id', user?.organization_id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.organization_id
+  });
+
+  // Query to fetch students from the same organization
+  const { data: students, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['organization-students', user?.organization_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('auth')
+        .select('*')
+        .eq('organization_id', user?.organization_id)
+        .eq('role', 'student')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
+  });
+
+  // Query to fetch all learning paths
+  const { data: allLearningPaths } = useQuery({
+    queryKey: ['all-learning-paths'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('learning_paths')
+        .select('*')
+        .order('title');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Query to fetch all assessments
+  const { data: allAssessments } = useQuery({
+    queryKey: ['all-assessments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Mutation to assign learning path to student
+  const assignLearningPathMutation = useMutation({
+    mutationFn: async ({ studentId, learningPathId }: { studentId: string; learningPathId: string }) => {
+      // Get current assigned learning paths
+      const { data: studentData, error: fetchError } = await supabase
+        .from('auth')
+        .select('assigned_learning_paths')
+        .eq('id', studentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentPaths = studentData.assigned_learning_paths || [];
+      const updatedPaths = currentPaths.includes(learningPathId) 
+        ? currentPaths 
+        : [...currentPaths, learningPathId];
+
+      const { error } = await supabase
+        .from('auth')
+        .update({ assigned_learning_paths: updatedPaths })
+        .eq('id', studentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-students'] });
+      toast({
+        title: "Success",
+        description: "Learning path assigned successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign learning path",
+        variant: "destructive",
+      });
     },
   });
 
-  const editForm = useForm<EditUserFormData>({
-    resolver: zodResolver(editUserSchema),
-    defaultValues: {
-      email: "",
-      name: "",
+  // Mutation to assign assessment to student
+  const assignAssessmentMutation = useMutation({
+    mutationFn: async ({ studentId, assessmentCode }: { studentId: string; assessmentCode: string }) => {
+      // Get current assigned assessments
+      const { data: studentData, error: fetchError } = await supabase
+        .from('auth')
+        .select('assigned_assessments')
+        .eq('id', studentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const currentAssessments = studentData.assigned_assessments || [];
+      const updatedAssessments = currentAssessments.includes(assessmentCode) 
+        ? currentAssessments 
+        : [...currentAssessments, assessmentCode];
+
+      const { error } = await supabase
+        .from('auth')
+        .update({ assigned_assessments: updatedAssessments })
+        .eq('id', studentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organization-students'] });
+      toast({
+        title: "Success",
+        description: "Assessment assigned successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign assessment",
+        variant: "destructive",
+      });
     },
   });
 
@@ -218,7 +343,17 @@ const Users: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  if (isLoadingUsers) {
+  const getAvailableLearningPaths = () => {
+    const organizationPaths = organizationData?.assigned_learning_paths || [];
+    return allLearningPaths?.filter(path => organizationPaths.includes(path.id)) || [];
+  };
+
+  const getAvailableAssessments = () => {
+    const organizationAssessments = organizationData?.assigned_assessments_code || [];
+    return allAssessments?.filter(assessment => organizationAssessments.includes(assessment.code)) || [];
+  };
+
+  if (isLoadingUsers || isLoadingStudents) {
     return (
       <div className="flex justify-center items-center h-64">
         <LoadingSpinner size="lg" />
@@ -227,7 +362,7 @@ const Users: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Admin Users Management</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -406,6 +541,148 @@ const Users: React.FC = () => {
             ) : (
               <div className="text-center py-6">
                 <p className="text-gray-500">No admin users found in your organization.</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Current organization ID: {user?.organization_id || 'Not set'}
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Student Management Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Student Management
+          </CardTitle>
+          <CardDescription>
+            Manage students in your organization and assign learning paths and assessments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            {students && students.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>PRN</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Year</TableHead>
+                    <TableHead>Assigned Learning Paths</TableHead>
+                    <TableHead>Assigned Assessments</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {students.map((student) => (
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.name || '-'}</TableCell>
+                      <TableCell>{student.email}</TableCell>
+                      <TableCell>{student.prn || '-'}</TableCell>
+                      <TableCell>{student.department || '-'}</TableCell>
+                      <TableCell>{student.year || '-'}</TableCell>
+                      <TableCell>
+                        <span className="text-xs text-gray-600">
+                          {(student.assigned_learning_paths || []).length} paths
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-gray-600">
+                          {(student.assigned_assessments || []).length} assessments
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {/* Learning Paths Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <BookOpen className="h-4 w-4 mr-1" />
+                                Learning Paths
+                                <ChevronDown className="h-4 w-4 ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              {getAvailableLearningPaths().map((path) => (
+                                <DropdownMenuItem
+                                  key={path.id}
+                                  onClick={() => assignLearningPathMutation.mutate({
+                                    studentId: student.id,
+                                    learningPathId: path.id
+                                  })}
+                                  disabled={
+                                    (student.assigned_learning_paths || []).includes(path.id) ||
+                                    assignLearningPathMutation.isPending
+                                  }
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{path.title}</span>
+                                    <span className="text-xs text-gray-500">{path.difficulty}</span>
+                                  </div>
+                                  {(student.assigned_learning_paths || []).includes(path.id) && (
+                                    <span className="ml-auto text-xs text-green-600">✓ Assigned</span>
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                              {getAvailableLearningPaths().length === 0 && (
+                                <DropdownMenuItem disabled>
+                                  No learning paths available
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          {/* Assessments Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <FileText className="h-4 w-4 mr-1" />
+                                Assessments
+                                <ChevronDown className="h-4 w-4 ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              {getAvailableAssessments().map((assessment) => (
+                                <DropdownMenuItem
+                                  key={assessment.id}
+                                  onClick={() => assignAssessmentMutation.mutate({
+                                    studentId: student.id,
+                                    assessmentCode: assessment.code
+                                  })}
+                                  disabled={
+                                    (student.assigned_assessments || []).includes(assessment.code) ||
+                                    assignAssessmentMutation.isPending
+                                  }
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{assessment.name}</span>
+                                    <span className="text-xs text-gray-500">Code: {assessment.code}</span>
+                                  </div>
+                                  {(student.assigned_assessments || []).includes(assessment.code) && (
+                                    <span className="ml-auto text-xs text-green-600">✓ Assigned</span>
+                                  )}
+                                </DropdownMenuItem>
+                              ))}
+                              {getAvailableAssessments().length === 0 && (
+                                <DropdownMenuItem disabled>
+                                  No assessments available
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500">No students found in your organization.</p>
                 <p className="text-sm text-gray-400 mt-2">
                   Current organization ID: {user?.organization_id || 'Not set'}
                 </p>
