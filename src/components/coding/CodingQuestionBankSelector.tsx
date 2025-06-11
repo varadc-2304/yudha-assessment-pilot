@@ -52,7 +52,7 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
       const { data: questions, error } = await supabase
         .from('coding_question_bank')
         .select('*')
-        .in('created_by', adminIds)
+        // .in('created_by', adminIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
