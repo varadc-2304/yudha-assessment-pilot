@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,30 +28,14 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
 
-  // Fetch coding questions from bank - now includes questions created by all organization admins
+  // Fetch coding questions from bank - now includes ALL questions regardless of organization
   const { data: bankQuestions, isLoading } = useQuery({
-    queryKey: ['coding-question-bank', user?.organization],
+    queryKey: ['coding-question-bank-all'],
     queryFn: async () => {
-      // Get all users with admin role in the same organization
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('auth')
-        .select('id')
-        .eq('role', 'admin')
-        .eq('organization', user?.organization);
-
-      if (adminError) throw adminError;
-
-      if (!adminUsers || adminUsers.length === 0) {
-        return [];
-      }
-
-      const adminIds = adminUsers.map(admin => admin.id);
-
-      // Get questions created by any admin in the organization
+      // Get all questions from the coding question bank without organization filter
       const { data: questions, error } = await supabase
         .from('coding_question_bank')
         .select('*')
-        // .in('created_by', adminIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -98,7 +81,7 @@ const CodingQuestionBankSelector: React.FC<Props> = ({ assessmentId, onCancel })
 
       return questionsWithRelatedData;
     },
-    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization
+    enabled: !!user?.id && user?.role === 'admin'
   });
 
   // Get unique topics and difficulties for filter options
