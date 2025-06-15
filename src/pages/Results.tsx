@@ -6,6 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   LineChart,
   Line,
   XAxis,
@@ -222,23 +230,8 @@ const Results: React.FC = () => {
       });
       
       if (recordWithData) {
-        // Safely convert the Json type to FaceViolation[] with proper type checking
-        let faceViolations: FaceViolation[] = [];
-        
-        if (recordWithData.face_violations && Array.isArray(recordWithData.face_violations)) {
-          faceViolations = recordWithData.face_violations.map((violation: any) => {
-            // Ensure each violation has the required structure
-            const typedViolation: FaceViolation = {
-              type: (violation && typeof violation === 'object' && violation.type) ? String(violation.type) : 'Unknown',
-              timestamp: (violation && typeof violation === 'object' && violation.timestamp) ? String(violation.timestamp) : undefined,
-              confidence: (violation && typeof violation === 'object' && violation.confidence) ? Number(violation.confidence) : undefined
-            };
-            return typedViolation;
-          });
-        }
-        
         return {
-          face_violations: faceViolations,
+          face_violations: recordWithData.face_violations || [],
           recording_url: recordWithData.recording_url
         };
       }
@@ -509,86 +502,82 @@ const Results: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Student</th>
-                  {!assessmentId && (
-                    <th className="text-left py-3 px-4">Assessment</th>
-                  )}
-                  <th className="text-center py-3 px-4">Score</th>
-                  <th className="text-center py-3 px-4">Status</th>
-                  <th className="text-center py-3 px-4">Cheating</th>
-                  <th className="text-center py-3 px-4">Submitted At</th>
-                  <th className="text-center py-3 px-4">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResults.length > 0 ? (
-                  filteredResults.map((result) => (
-                    <tr key={result.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div>
-                          <div className="font-medium">{result.userName}</div>
-                          {result.userPrn && (
-                            <div className="text-xs text-gray-500">{result.userPrn}</div>
-                          )}
-                        </div>
-                      </td>
-                      {!assessmentId && (
-                        <td className="py-3 px-4">
-                          <Link 
-                            to={`/results/${result.assessment_id}`}
-                            className="text-yudha-600 hover:underline"
-                          >
-                            {result.assessment?.name} ({result.assessment?.code})
-                          </Link>
-                        </td>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                {!assessmentId && <TableHead>Assessment</TableHead>}
+                <TableHead className="text-center">Score</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Cheating</TableHead>
+                <TableHead className="text-center">Submitted At</TableHead>
+                <TableHead className="text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredResults.length > 0 ? (
+                filteredResults.map((result) => (
+                  <TableRow key={result.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{result.userName}</div>
+                        {result.userPrn && (
+                          <div className="text-xs text-gray-500">{result.userPrn}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    {!assessmentId && (
+                      <TableCell>
+                        <Link 
+                          to={`/results/${result.assessment_id}`}
+                          className="text-yudha-600 hover:underline"
+                        >
+                          {result.assessment?.name} ({result.assessment?.code})
+                        </Link>
+                      </TableCell>
+                    )}
+                    <TableCell className="text-center">
+                      {result.percentage}% ({result.total_score}/{result.total_marks})
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {result.percentage >= PASS_THRESHOLD ? (
+                        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Passed</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-red-500 border-red-200 hover:bg-red-50">Failed</Badge>
                       )}
-                      <td className="py-3 px-4 text-center">
-                        {result.percentage}% ({result.total_score}/{result.total_marks})
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {result.percentage >= PASS_THRESHOLD ? (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Passed</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-red-500 border-red-200 hover:bg-red-50">Failed</Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {result.is_cheated ? (
-                          <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Flagged</Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Clean</Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">{formatDate(result.completed_at)}</td>
-                      <td className="py-3 px-4 text-center">
-                        {result.assessment?.is_ai_proctored ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewProctoring(result.user_id, result.assessment_id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={assessmentId ? 6 : 7} className="text-center py-8">
-                      <p className="text-gray-500">No results found for organization students.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {result.is_cheated ? (
+                        <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">Flagged</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">Clean</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">{formatDate(result.completed_at)}</TableCell>
+                    <TableCell className="text-center">
+                      {result.assessment?.is_ai_proctored ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewProctoring(result.user_id, result.assessment_id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={assessmentId ? 6 : 7} className="text-center py-8">
+                    <p className="text-gray-500">No results found for organization students.</p>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
@@ -608,19 +597,19 @@ const Results: React.FC = () => {
               {/* Face Violations */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Face Violations</h3>
-                {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
+                {proctoringData?.face_violations && Array.isArray(proctoringData.face_violations) && proctoringData.face_violations.length > 0 ? (
                   <div className="space-y-2">
-                    {proctoringData.face_violations.map((violation: FaceViolation, index: number) => (
+                    {proctoringData.face_violations.map((violation: any, index: number) => (
                       <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <div className="text-sm">
-                          <strong>Type:</strong> {violation.type || 'Unknown'}
+                          <strong>Type:</strong> {violation?.type || 'Unknown'}
                         </div>
-                        {violation.timestamp && (
+                        {violation?.timestamp && (
                           <div className="text-sm text-gray-600">
                             <strong>Time:</strong> {new Date(violation.timestamp).toLocaleString()}
                           </div>
                         )}
-                        {violation.confidence && (
+                        {violation?.confidence && (
                           <div className="text-sm text-gray-600">
                             <strong>Confidence:</strong> {(violation.confidence * 100).toFixed(1)}%
                           </div>
