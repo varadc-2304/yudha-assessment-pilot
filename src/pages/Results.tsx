@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,6 +32,7 @@ import { AssessmentResult, FaceViolation, ProctoringData } from "@/types/assessm
 import { useAuth } from "@/contexts/AuthContext";
 import { Bot, Eye } from "lucide-react";
 import AskAIDialog from "@/components/results/AskAIDialog";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import {
   Dialog,
   DialogContent,
@@ -212,7 +212,7 @@ const Results: React.FC = () => {
   // Fetch proctoring data for selected user and assessment
   const { data: proctoringData, isLoading: isProctoringLoading } = useQuery({
     queryKey: ['proctoring-data', selectedUserAssessment?.userId, selectedUserAssessment?.assessmentId],
-    queryFn: async (): Promise<ProctoringData | null> => {
+    queryFn: async () => {
       if (!selectedUserAssessment) return null;
       
       const { data, error } = await supabase
@@ -230,8 +230,13 @@ const Results: React.FC = () => {
       });
       
       if (recordWithData) {
+        // Convert face_violations to string array safely
+        const violations = Array.isArray(recordWithData.face_violations) 
+          ? recordWithData.face_violations.map(v => String(v))
+          : [];
+          
         return {
-          face_violations: recordWithData.face_violations || [],
+          face_violations: violations,
           recording_url: recordWithData.recording_url
         };
       }
@@ -581,9 +586,9 @@ const Results: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Proctoring Data Dialog */}
+      {/* Proctoring Data Dialog with Video Player */}
       <Dialog open={proctoringDialogOpen} onOpenChange={setProctoringDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Proctoring Data</DialogTitle>
           </DialogHeader>
@@ -592,28 +597,20 @@ const Results: React.FC = () => {
             <div className="flex justify-center items-center h-32">
               <LoadingSpinner size="lg" />
             </div>
+          ) : proctoringData?.recording_url ? (
+            <VideoPlayer 
+              videoUrl={proctoringData.recording_url}
+              violations={proctoringData.face_violations}
+            />
           ) : (
             <div className="space-y-6">
-              {/* Face Violations */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Face Violations</h3>
-                {proctoringData?.face_violations && Array.isArray(proctoringData.face_violations) && proctoringData.face_violations.length > 0 ? (
+                {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
                   <div className="space-y-2">
-                    {proctoringData.face_violations.map((violation: any, index: number) => (
+                    {proctoringData.face_violations.map((violation, index) => (
                       <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
-                        <div className="text-sm">
-                          <strong>Type:</strong> {violation?.type || 'Unknown'}
-                        </div>
-                        {violation?.timestamp && (
-                          <div className="text-sm text-gray-600">
-                            <strong>Time:</strong> {new Date(violation.timestamp).toLocaleString()}
-                          </div>
-                        )}
-                        {violation?.confidence && (
-                          <div className="text-sm text-gray-600">
-                            <strong>Confidence:</strong> {(violation.confidence * 100).toFixed(1)}%
-                          </div>
-                        )}
+                        <div className="text-sm">{violation}</div>
                       </div>
                     ))}
                   </div>
@@ -621,23 +618,9 @@ const Results: React.FC = () => {
                   <p className="text-gray-500">No face violations recorded.</p>
                 )}
               </div>
-
-              {/* Recording Video */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Recording</h3>
-                {proctoringData?.recording_url ? (
-                  <video 
-                    controls 
-                    className="w-full max-w-2xl rounded-md"
-                    preload="metadata"
-                  >
-                    <source src={proctoringData.recording_url} type="video/webm" />
-                    <source src={proctoringData.recording_url} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                ) : (
-                  <p className="text-gray-500">No recording available.</p>
-                )}
+                <p className="text-gray-500">No recording available.</p>
               </div>
             </div>
           )}
