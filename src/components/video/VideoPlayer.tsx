@@ -13,7 +13,9 @@ interface VideoPlayerProps {
 interface Bookmark {
   timestamp: string;
   timeInSeconds: number;
+  startTime: number; // 60 seconds before the violation
   description: string;
+  timeRange: string; // Display range like "02:10 - 03:10"
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
@@ -26,7 +28,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
-  // Parse violations into bookmarks
+  // Parse violations into bookmarks with time ranges
   useEffect(() => {
     const parseBookmarks = () => {
       const parsed = violations.map((violation) => {
@@ -36,12 +38,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
           const minutes = parseInt(timestampMatch[1]);
           const seconds = parseInt(timestampMatch[2]);
           const timeInSeconds = minutes * 60 + seconds;
+          const startTime = Math.max(0, timeInSeconds - 60); // Start 60 seconds before, but not negative
           const description = violation.replace(/\[\d{2}:\d{2}\]\s*/, '');
+          
+          // Format time range display
+          const formatTimeForDisplay = (time: number) => {
+            const mins = Math.floor(time / 60);
+            const secs = Math.floor(time % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          };
+          
+          const timeRange = `${formatTimeForDisplay(startTime)} - ${formatTimeForDisplay(timeInSeconds)}`;
           
           return {
             timestamp: `${timestampMatch[1]}:${timestampMatch[2]}`,
             timeInSeconds,
-            description
+            startTime,
+            description,
+            timeRange
           };
         }
         return null;
@@ -107,6 +121,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     video.currentTime = time;
   };
 
+  const handleBookmarkClick = (bookmark: Bookmark) => {
+    // Seek to the start of the violation period (60 seconds before)
+    seekTo(bookmark.startTime);
+  };
+
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const progressBar = progressRef.current;
     if (!progressBar || !duration) return;
@@ -142,7 +161,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   };
 
   const isBookmarkActive = (bookmark: Bookmark) => {
-    return Math.abs(currentTime - bookmark.timeInSeconds) < 2; // 2 second threshold
+    // Check if current time is within the violation range
+    return currentTime >= bookmark.startTime && currentTime <= bookmark.timeInSeconds;
   };
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -181,18 +201,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
               </div>
             </div>
             
-            {/* Bookmark indicators */}
+            {/* Bookmark indicators - positioned at the start of violation period */}
             {bookmarks.map((bookmark, index) => {
-              const bookmarkPosition = duration > 0 ? (bookmark.timeInSeconds / duration) * 100 : 0;
+              const bookmarkPosition = duration > 0 ? (bookmark.startTime / duration) * 100 : 0;
               return (
                 <div
                   key={index}
                   className="absolute top-0 w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 cursor-pointer hover:scale-110 transition-transform duration-200"
                   style={{ left: `${bookmarkPosition}%` }}
-                  title={`${bookmark.timestamp} - ${bookmark.description}`}
+                  title={`${bookmark.timeRange} - ${bookmark.description}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    seekTo(bookmark.timeInSeconds);
+                    handleBookmarkClick(bookmark);
                   }}
                 />
               );
@@ -270,20 +290,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
                       ? 'bg-red-50 border-red-200'
                       : 'hover:bg-gray-50'
                   }`}
-                  onClick={() => seekTo(bookmark.timeInSeconds)}
+                  onClick={() => handleBookmarkClick(bookmark)}
                 >
                   <div className="flex items-center gap-3">
                     <Badge 
                       variant="outline" 
                       className={isBookmarkActive(bookmark) ? 'bg-red-100 text-red-800' : ''}
                     >
-                      {bookmark.timestamp}
+                      {bookmark.timeRange}
                     </Badge>
                     <span className="text-sm">{bookmark.description}</span>
                   </div>
                   {isBookmarkActive(bookmark) && (
                     <Badge variant="secondary" className="text-xs">
-                      Current
+                      Active
                     </Badge>
                   )}
                 </div>
