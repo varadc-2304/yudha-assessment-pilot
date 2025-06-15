@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -221,14 +222,20 @@ const Results: React.FC = () => {
       });
       
       if (recordWithData) {
-        // Safely convert the Json type to FaceViolation[]
-        const faceViolations: FaceViolation[] = Array.isArray(recordWithData.face_violations) 
-          ? (recordWithData.face_violations as any[]).map(violation => ({
-              type: violation?.type || 'Unknown',
-              timestamp: violation?.timestamp,
-              confidence: violation?.confidence
-            }))
-          : [];
+        // Safely convert the Json type to FaceViolation[] with proper type checking
+        let faceViolations: FaceViolation[] = [];
+        
+        if (recordWithData.face_violations && Array.isArray(recordWithData.face_violations)) {
+          faceViolations = recordWithData.face_violations.map((violation: any) => {
+            // Ensure each violation has the required structure
+            const typedViolation: FaceViolation = {
+              type: (violation && typeof violation === 'object' && violation.type) ? String(violation.type) : 'Unknown',
+              timestamp: (violation && typeof violation === 'object' && violation.timestamp) ? String(violation.timestamp) : undefined,
+              confidence: (violation && typeof violation === 'object' && violation.confidence) ? Number(violation.confidence) : undefined
+            };
+            return typedViolation;
+          });
+        }
         
         return {
           face_violations: faceViolations,
