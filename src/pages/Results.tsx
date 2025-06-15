@@ -216,13 +216,22 @@ const Results: React.FC = () => {
       
       // Find the record with data
       const recordWithData = data.find(record => {
-        const violations = record.face_violations as FaceViolation[] | null;
-        return (violations && violations.length > 0) || record.recording_url;
+        const violations = record.face_violations;
+        return (violations && Array.isArray(violations) && violations.length > 0) || record.recording_url;
       });
       
       if (recordWithData) {
+        // Safely convert the Json type to FaceViolation[]
+        const faceViolations: FaceViolation[] = Array.isArray(recordWithData.face_violations) 
+          ? (recordWithData.face_violations as any[]).map(violation => ({
+              type: violation?.type || 'Unknown',
+              timestamp: violation?.timestamp,
+              confidence: violation?.confidence
+            }))
+          : [];
+        
         return {
-          face_violations: (recordWithData.face_violations as FaceViolation[]) || [],
+          face_violations: faceViolations,
           recording_url: recordWithData.recording_url
         };
       }
