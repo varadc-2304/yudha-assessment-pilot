@@ -20,7 +20,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { AssessmentResult } from "@/types/assessment";
+import { AssessmentResult, FaceViolation, ProctoringData } from "@/types/assessment";
 import { useAuth } from "@/contexts/AuthContext";
 import { Bot, Eye } from "lucide-react";
 import AskAIDialog from "@/components/results/AskAIDialog";
@@ -203,7 +203,7 @@ const Results: React.FC = () => {
   // Fetch proctoring data for selected user and assessment
   const { data: proctoringData, isLoading: isProctoringLoading } = useQuery({
     queryKey: ['proctoring-data', selectedUserAssessment?.userId, selectedUserAssessment?.assessmentId],
-    queryFn: async () => {
+    queryFn: async (): Promise<ProctoringData | null> => {
       if (!selectedUserAssessment) return null;
       
       const { data, error } = await supabase
@@ -216,11 +216,18 @@ const Results: React.FC = () => {
       
       // Find the record with data
       const recordWithData = data.find(record => {
-        const violations = record.face_violations as any[];
+        const violations = record.face_violations as FaceViolation[] | null;
         return (violations && violations.length > 0) || record.recording_url;
       });
       
-      return recordWithData || { face_violations: [], recording_url: null };
+      if (recordWithData) {
+        return {
+          face_violations: (recordWithData.face_violations as FaceViolation[]) || [],
+          recording_url: recordWithData.recording_url
+        };
+      }
+      
+      return { face_violations: [], recording_url: null };
     },
     enabled: !!selectedUserAssessment
   });
@@ -585,9 +592,9 @@ const Results: React.FC = () => {
               {/* Face Violations */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Face Violations</h3>
-                {proctoringData?.face_violations && Array.isArray(proctoringData.face_violations) && proctoringData.face_violations.length > 0 ? (
+                {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
                   <div className="space-y-2">
-                    {(proctoringData.face_violations as any[]).map((violation: any, index: number) => (
+                    {proctoringData.face_violations.map((violation: FaceViolation, index: number) => (
                       <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <div className="text-sm">
                           <strong>Type:</strong> {violation.type || 'Unknown'}

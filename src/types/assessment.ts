@@ -1,4 +1,3 @@
-
 export interface MCQOption {
   id: string;
   text: string;
@@ -126,4 +125,15 @@ export interface AssessmentStats {
   totalSubmissions: number;
   averageScore: number;
   passRate: number;
+}
+
+export interface FaceViolation {
+  type: string;
+  timestamp?: string;
+  confidence?: number;
+}
+
+export interface ProctoringData {
+  face_violations: FaceViolation[];
+  recording_url: string | null;
 }
