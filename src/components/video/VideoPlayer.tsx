@@ -13,7 +13,9 @@ interface VideoPlayerProps {
 interface Bookmark {
   timestamp: string;
   timeInSeconds: number;
+  startTimeInSeconds: number;
   description: string;
+  timeRange: string;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
@@ -26,7 +28,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
 
-  // Parse violations into bookmarks
+  // Parse violations into bookmarks with time ranges
   useEffect(() => {
     const parseBookmarks = () => {
       const parsed = violations.map((violation) => {
@@ -36,12 +38,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
           const minutes = parseInt(timestampMatch[1]);
           const seconds = parseInt(timestampMatch[2]);
           const timeInSeconds = minutes * 60 + seconds;
+          const startTimeInSeconds = Math.max(0, timeInSeconds - 60); // 60 seconds before, but not negative
           const description = violation.replace(/\[\d{2}:\d{2}\]\s*/, '');
+          
+          // Format time range
+          const formatTime = (totalSeconds: number) => {
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = Math.floor(totalSeconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          };
+          
+          const timeRange = `${formatTime(startTimeInSeconds)} - ${formatTime(timeInSeconds)}`;
           
           return {
             timestamp: `${timestampMatch[1]}:${timestampMatch[2]}`,
             timeInSeconds,
-            description
+            startTimeInSeconds,
+            description,
+            timeRange
           };
         }
         return null;
@@ -62,8 +76,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
 
     const updateTime = () => setCurrentTime(video.currentTime);
     const updateDuration = () => {
-      setDuration(video.duration);
-      setIsVideoLoaded(true);
+      if (video.duration && isFinite(video.duration)) {
+        setDuration(video.duration);
+        setIsVideoLoaded(true);
+      }
     };
     const handleLoadedData = () => setIsVideoLoaded(true);
 
@@ -71,12 +87,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     video.addEventListener('loadedmetadata', updateDuration);
     video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('canplay', handleLoadedData);
+    video.addEventListener('durationchange', updateDuration);
 
     return () => {
       video.removeEventListener('timeupdate', updateTime);
       video.removeEventListener('loadedmetadata', updateDuration);
       video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('canplay', handleLoadedData);
+      video.removeEventListener('durationchange', updateDuration);
     };
   }, []);
 
@@ -102,21 +120,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
 
   const seekTo = (time: number) => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !isFinite(time)) return;
 
-    video.currentTime = time;
+    video.currentTime = Math.max(0, Math.min(time, duration));
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const progressBar = progressRef.current;
-    if (!progressBar || !duration) return;
+    if (!progressBar || !duration || !isFinite(duration)) return;
 
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const progressWidth = rect.width;
     const clickTime = (clickX / progressWidth) * duration;
     
-    seekTo(clickTime);
+    if (isFinite(clickTime)) {
+      seekTo(clickTime);
+    }
   };
 
   const skipForward = () => {
@@ -142,10 +162,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   };
 
   const isBookmarkActive = (bookmark: Bookmark) => {
-    return Math.abs(currentTime - bookmark.timeInSeconds) < 2; // 2 second threshold
+    return currentTime >= bookmark.startTimeInSeconds && currentTime <= bookmark.timeInSeconds;
   };
 
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const progressPercentage = duration > 0 && isFinite(duration) ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -169,32 +189,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
           <div className="mb-4 relative">
             <div 
               ref={progressRef}
-              className="w-full bg-gray-600/50 rounded-full h-2 cursor-pointer hover:h-3 transition-all duration-200"
+              className="w-full bg-gray-600/50 rounded-full h-3 cursor-pointer hover:h-4 transition-all duration-200"
               onClick={handleProgressClick}
             >
               <div 
                 className="bg-blue-500 h-full rounded-full transition-all duration-100 relative"
-                style={{ width: `${progressPercentage}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, progressPercentage))}%` }}
               >
                 {/* Progress handle */}
                 <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200" />
               </div>
             </div>
             
-            {/* Bookmark indicators */}
+            {/* Bookmark indicators - show range indicators */}
             {bookmarks.map((bookmark, index) => {
-              const bookmarkPosition = duration > 0 ? (bookmark.timeInSeconds / duration) * 100 : 0;
+              if (!duration || !isFinite(duration)) return null;
+              
+              const startPosition = (bookmark.startTimeInSeconds / duration) * 100;
+              const endPosition = (bookmark.timeInSeconds / duration) * 100;
+              const width = endPosition - startPosition;
+              
               return (
-                <div
-                  key={index}
-                  className="absolute top-0 w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 cursor-pointer hover:scale-110 transition-transform duration-200"
-                  style={{ left: `${bookmarkPosition}%` }}
-                  title={`${bookmark.timestamp} - ${bookmark.description}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    seekTo(bookmark.timeInSeconds);
-                  }}
-                />
+                <div key={index} className="absolute top-0 h-3">
+                  {/* Range indicator */}
+                  <div
+                    className="absolute top-0 h-3 bg-red-400/60 cursor-pointer hover:bg-red-500/80 transition-colors duration-200"
+                    style={{ 
+                      left: `${Math.min(100, Math.max(0, startPosition))}%`,
+                      width: `${Math.min(100 - startPosition, Math.max(0, width))}%`
+                    }}
+                    title={`${bookmark.timeRange} - ${bookmark.description}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      seekTo(bookmark.startTimeInSeconds);
+                    }}
+                  />
+                  {/* End point marker */}
+                  <div
+                    className="absolute top-0 w-1 h-3 bg-red-600 rounded-full cursor-pointer hover:scale-110 transition-transform duration-200"
+                    style={{ left: `${Math.min(100, Math.max(0, endPosition))}%` }}
+                    title={`Violation at ${bookmark.timestamp} - ${bookmark.description}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      seekTo(bookmark.startTimeInSeconds);
+                    }}
+                  />
+                </div>
               );
             })}
           </div>
@@ -270,14 +310,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
                       ? 'bg-red-50 border-red-200'
                       : 'hover:bg-gray-50'
                   }`}
-                  onClick={() => seekTo(bookmark.timeInSeconds)}
+                  onClick={() => seekTo(bookmark.startTimeInSeconds)}
                 >
                   <div className="flex items-center gap-3">
                     <Badge 
                       variant="outline" 
                       className={isBookmarkActive(bookmark) ? 'bg-red-100 text-red-800' : ''}
                     >
-                      {bookmark.timestamp}
+                      {bookmark.timeRange}
                     </Badge>
                     <span className="text-sm">{bookmark.description}</span>
                   </div>
