@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,8 +22,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AssessmentResult } from "@/types/assessment";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bot } from "lucide-react";
+import { Bot, Eye } from "lucide-react";
 import AskAIDialog from "@/components/results/AskAIDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const COLORS = ["#8884d8", "#FF8042"];
 const PASS_THRESHOLD = 60; // Assuming 60% is passing
@@ -33,6 +38,8 @@ const Results: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId?: string }>();
   const [searchTerm, setSearchTerm] = useState("");
   const [askAIOpen, setAskAIOpen] = useState(false);
+  const [proctoringDialogOpen, setProctoringDialogOpen] = useState(false);
+  const [selectedUserAssessment, setSelectedUserAssessment] = useState<{userId: string, assessmentId: string} | null>(null);
   const { user } = useAuth();
 
   // First, fetch organization and its assigned assessments
@@ -122,7 +129,7 @@ const Results: React.FC = () => {
         completed_at,
         created_at,
         is_cheated,
-        assessments(name, code),
+        assessments(name, code, is_ai_proctored),
         auth(name, email, prn, department)
       `)
       .in('assessment_id', assessmentIds)
@@ -148,11 +155,37 @@ const Results: React.FC = () => {
         is_cheated: result.is_cheated,
         assessment: {
           name: result.assessments.name,
-          code: result.assessments.code
+          code: result.assessments.code,
+          is_ai_proctored: result.assessments.is_ai_proctored
         }
       }));
     },
     enabled: !!user?.id && user?.role === 'admin' && !!orgAssessments && orgAssessments.length > 0
+  });
+
+  // Fetch proctoring data for selected user and assessment
+  const { data: proctoringData, isLoading: isProctoringLoading } = useQuery({
+    queryKey: ['proctoring-data', selectedUserAssessment?.userId, selectedUserAssessment?.assessmentId],
+    queryFn: async () => {
+      if (!selectedUserAssessment) return null;
+      
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('face_violations, recording_url')
+        .eq('user_id', selectedUserAssessment.userId)
+        .eq('assessment_id', selectedUserAssessment.assessmentId);
+      
+      if (error) throw error;
+      
+      // Find the record with data
+      const recordWithData = data.find(record => 
+        (record.face_violations && record.face_violations.length > 0) || 
+        record.recording_url
+      );
+      
+      return recordWithData || { face_violations: [], recording_url: null };
+    },
+    enabled: !!selectedUserAssessment
   });
 
   // Fetch assessment details if assessmentId is provided
@@ -254,6 +287,11 @@ const Results: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleViewProctoring = (userId: string, assessmentId: string) => {
+    setSelectedUserAssessment({ userId, assessmentId });
+    setProctoringDialogOpen(true);
   };
 
   if (error) {
@@ -420,6 +458,7 @@ const Results: React.FC = () => {
                   <th className="text-center py-3 px-4">Status</th>
                   <th className="text-center py-3 px-4">Cheating</th>
                   <th className="text-center py-3 px-4">Submitted At</th>
+                  <th className="text-center py-3 px-4">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -462,11 +501,24 @@ const Results: React.FC = () => {
                         )}
                       </td>
                       <td className="py-3 px-4 text-center">{formatDate(result.completed_at)}</td>
+                      <td className="py-3 px-4 text-center">
+                        {result.assessment?.is_ai_proctored ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewProctoring(result.user_id, result.assessment_id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={assessmentId ? 5 : 6} className="text-center py-8">
+                    <td colSpan={assessmentId ? 6 : 7} className="text-center py-8">
                       <p className="text-gray-500">No results found for organization students.</p>
                     </td>
                   </tr>
@@ -476,6 +528,69 @@ const Results: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Proctoring Data Dialog */}
+      <Dialog open={proctoringDialogOpen} onOpenChange={setProctoringDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Proctoring Data</DialogTitle>
+          </DialogHeader>
+          
+          {isProctoringLoading ? (
+            <div className="flex justify-center items-center h-32">
+              <LoadingSpinner size="lg" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Face Violations */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Face Violations</h3>
+                {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
+                  <div className="space-y-2">
+                    {proctoringData.face_violations.map((violation: any, index: number) => (
+                      <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
+                        <div className="text-sm">
+                          <strong>Type:</strong> {violation.type || 'Unknown'}
+                        </div>
+                        {violation.timestamp && (
+                          <div className="text-sm text-gray-600">
+                            <strong>Time:</strong> {new Date(violation.timestamp).toLocaleString()}
+                          </div>
+                        )}
+                        {violation.confidence && (
+                          <div className="text-sm text-gray-600">
+                            <strong>Confidence:</strong> {(violation.confidence * 100).toFixed(1)}%
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">No face violations recorded.</p>
+                )}
+              </div>
+
+              {/* Recording Video */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Recording</h3>
+                {proctoringData?.recording_url ? (
+                  <video 
+                    controls 
+                    className="w-full max-w-2xl rounded-md"
+                    preload="metadata"
+                  >
+                    <source src={proctoringData.recording_url} type="video/webm" />
+                    <source src={proctoringData.recording_url} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <p className="text-gray-500">No recording available.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AskAIDialog
         open={askAIOpen}
