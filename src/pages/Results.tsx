@@ -178,10 +178,10 @@ const Results: React.FC = () => {
       if (error) throw error;
       
       // Find the record with data
-      const recordWithData = data.find(record => 
-        (record.face_violations && record.face_violations.length > 0) || 
-        record.recording_url
-      );
+      const recordWithData = data.find(record => {
+        const violations = record.face_violations as any[];
+        return (violations && violations.length > 0) || record.recording_url;
+      });
       
       return recordWithData || { face_violations: [], recording_url: null };
     },
@@ -545,9 +545,9 @@ const Results: React.FC = () => {
               {/* Face Violations */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Face Violations</h3>
-                {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
+                {proctoringData?.face_violations && Array.isArray(proctoringData.face_violations) && proctoringData.face_violations.length > 0 ? (
                   <div className="space-y-2">
-                    {proctoringData.face_violations.map((violation: any, index: number) => (
+                    {(proctoringData.face_violations as any[]).map((violation: any, index: number) => (
                       <div key={index} className="p-3 bg-red-50 border border-red-200 rounded-md">
                         <div className="text-sm">
                           <strong>Type:</strong> {violation.type || 'Unknown'}
