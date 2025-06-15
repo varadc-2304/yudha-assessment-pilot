@@ -120,9 +120,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
 
   const seekTo = (time: number) => {
     const video = videoRef.current;
-    if (!video || !isFinite(time)) return;
+    if (!video || !isFinite(time) || !duration) return;
 
-    video.currentTime = Math.max(0, Math.min(time, duration));
+    // Ensure time is within bounds
+    const seekTime = Math.max(0, Math.min(time, duration));
+    
+    try {
+      video.currentTime = seekTime;
+      console.log(`Seeking to: ${seekTime}s`);
+    } catch (error) {
+      console.error('Error seeking video:', error);
+    }
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -140,17 +148,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   };
 
   const skipForward = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.currentTime = Math.min(video.currentTime + 10, duration);
+    seekTo(currentTime + 10);
   };
 
   const skipBackward = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.currentTime = Math.max(video.currentTime - 10, 0);
+    seekTo(currentTime - 10);
   };
 
   const formatTime = (time: number) => {
@@ -163,6 +165,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
 
   const isBookmarkActive = (bookmark: Bookmark) => {
     return currentTime >= bookmark.startTimeInSeconds && currentTime <= bookmark.timeInSeconds;
+  };
+
+  const handleBookmarkClick = (bookmark: Bookmark) => {
+    console.log(`Clicking bookmark: ${bookmark.timeRange}, seeking to: ${bookmark.startTimeInSeconds}s`);
+    seekTo(bookmark.startTimeInSeconds);
   };
 
   const progressPercentage = duration > 0 && isFinite(duration) ? (currentTime / duration) * 100 : 0;
@@ -221,7 +228,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
                     title={`${bookmark.timeRange} - ${bookmark.description}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      seekTo(bookmark.startTimeInSeconds);
+                      handleBookmarkClick(bookmark);
                     }}
                   />
                   {/* End point marker */}
@@ -231,7 +238,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
                     title={`Violation at ${bookmark.timestamp} - ${bookmark.description}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      seekTo(bookmark.startTimeInSeconds);
+                      handleBookmarkClick(bookmark);
                     }}
                   />
                 </div>
@@ -310,7 +317,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
                       ? 'bg-red-50 border-red-200'
                       : 'hover:bg-gray-50'
                   }`}
-                  onClick={() => seekTo(bookmark.startTimeInSeconds)}
+                  onClick={() => handleBookmarkClick(bookmark)}
                 >
                   <div className="flex items-center gap-3">
                     <Badge 
