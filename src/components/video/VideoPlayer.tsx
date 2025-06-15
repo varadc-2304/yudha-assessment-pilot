@@ -20,7 +20,6 @@ interface Bookmark {
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -126,18 +125,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     seekTo(bookmark.startTime);
   };
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const progressBar = progressRef.current;
-    if (!progressBar || !duration) return;
-
-    const rect = progressBar.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const progressWidth = rect.width;
-    const clickTime = (clickX / progressWidth) * duration;
-    
-    seekTo(clickTime);
-  };
-
   const skipForward = () => {
     const video = videoRef.current;
     if (!video) return;
@@ -152,20 +139,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     video.currentTime = Math.max(video.currentTime - 10, 0);
   };
 
-  const formatTime = (time: number) => {
-    if (!isFinite(time) || isNaN(time)) return '00:00';
-    
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   const isBookmarkActive = (bookmark: Bookmark) => {
     // Check if current time is within the violation range
     return currentTime >= bookmark.startTime && currentTime <= bookmark.timeInSeconds;
   };
-
-  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -185,42 +162,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
         
         {/* Custom Controls */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4">
-          {/* Progress Bar Container */}
-          <div className="mb-4 relative">
-            <div 
-              ref={progressRef}
-              className="w-full bg-gray-600/50 rounded-full h-2 cursor-pointer hover:h-3 transition-all duration-200"
-              onClick={handleProgressClick}
-            >
-              <div 
-                className="bg-blue-500 h-full rounded-full transition-all duration-100 relative"
-                style={{ width: `${progressPercentage}%` }}
-              >
-                {/* Progress handle */}
-                <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200" />
-              </div>
-            </div>
-            
-            {/* Bookmark indicators - positioned at the start of violation period */}
-            {bookmarks.map((bookmark, index) => {
-              const bookmarkPosition = duration > 0 ? (bookmark.startTime / duration) * 100 : 0;
-              return (
-                <div
-                  key={index}
-                  className="absolute top-0 w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 cursor-pointer hover:scale-110 transition-transform duration-200"
-                  style={{ left: `${bookmarkPosition}%` }}
-                  title={`${bookmark.timeRange} - ${bookmark.description}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleBookmarkClick(bookmark);
-                  }}
-                />
-              );
-            })}
-          </div>
-          
           {/* Controls */}
-          <div className="flex items-center justify-between text-white">
+          <div className="flex items-center justify-center text-white">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -258,10 +201,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
               >
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
-            </div>
-            
-            <div className="text-sm font-medium">
-              {formatTime(currentTime)} / {formatTime(duration)}
             </div>
           </div>
         </div>
