@@ -60,58 +60,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     const video = videoRef.current;
     if (!video) return;
 
-    const updateTime = () => {
-      if (video.currentTime && !isNaN(video.currentTime)) {
-        setCurrentTime(video.currentTime);
-      }
-    };
-    
+    const updateTime = () => setCurrentTime(video.currentTime);
     const updateDuration = () => {
-      if (video.duration && !isNaN(video.duration) && isFinite(video.duration)) {
-        console.log('Video duration loaded:', video.duration);
-        setDuration(video.duration);
-        setIsVideoLoaded(true);
-      }
-    };
-    
-    const handleLoadedMetadata = () => {
-      console.log('Video metadata loaded');
-      updateDuration();
-    };
-    
-    const handleLoadedData = () => {
-      console.log('Video data loaded');
+      setDuration(video.duration);
       setIsVideoLoaded(true);
-      updateDuration();
     };
-    
-    const handleCanPlay = () => {
-      console.log('Video can play');
-      updateDuration();
-    };
-
-    const handleDurationChange = () => {
-      console.log('Video duration changed');
-      updateDuration();
-    };
+    const handleLoadedData = () => setIsVideoLoaded(true);
 
     video.addEventListener('timeupdate', updateTime);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('loadedmetadata', updateDuration);
     video.addEventListener('loadeddata', handleLoadedData);
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('durationchange', handleDurationChange);
-
-    // Try to get duration immediately if already loaded
-    if (video.readyState >= 1) {
-      updateDuration();
-    }
+    video.addEventListener('canplay', handleLoadedData);
 
     return () => {
       video.removeEventListener('timeupdate', updateTime);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('loadedmetadata', updateDuration);
       video.removeEventListener('loadeddata', handleLoadedData);
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('durationchange', handleDurationChange);
+      video.removeEventListener('canplay', handleLoadedData);
     };
   }, []);
 
@@ -137,57 +102,39 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
 
   const seekTo = (time: number) => {
     const video = videoRef.current;
-    if (!video || !isFinite(time) || isNaN(time) || time < 0) {
-      console.warn('Invalid seek time:', time);
-      return;
-    }
+    if (!video) return;
 
-    // Ensure time is within video bounds
-    const clampedTime = Math.max(0, Math.min(time, duration || 0));
-    console.log('Seeking to:', clampedTime);
-    video.currentTime = clampedTime;
+    video.currentTime = time;
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const progressBar = progressRef.current;
-    if (!progressBar || !duration || duration <= 0 || !isFinite(duration)) {
-      console.warn('Cannot seek: invalid duration or progress bar not ready');
-      return;
-    }
+    if (!progressBar || !duration) return;
 
     const rect = progressBar.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const progressWidth = rect.width;
-    
-    if (progressWidth <= 0) {
-      console.warn('Invalid progress bar width');
-      return;
-    }
-    
     const clickTime = (clickX / progressWidth) * duration;
     
-    console.log('Progress click:', { clickX, progressWidth, duration, clickTime });
     seekTo(clickTime);
   };
 
   const skipForward = () => {
     const video = videoRef.current;
-    if (!video || !duration) return;
+    if (!video) return;
 
-    const newTime = Math.min(video.currentTime + 10, duration);
-    seekTo(newTime);
+    video.currentTime = Math.min(video.currentTime + 10, duration);
   };
 
   const skipBackward = () => {
     const video = videoRef.current;
     if (!video) return;
 
-    const newTime = Math.max(video.currentTime - 10, 0);
-    seekTo(newTime);
+    video.currentTime = Math.max(video.currentTime - 10, 0);
   };
 
   const formatTime = (time: number) => {
-    if (!isFinite(time) || isNaN(time) || time < 0) return '00:00';
+    if (!isFinite(time) || isNaN(time)) return '00:00';
     
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -198,7 +145,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
     return Math.abs(currentTime - bookmark.timeInSeconds) < 2; // 2 second threshold
   };
 
-  const progressPercentage = (duration > 0 && isFinite(duration)) ? (currentTime / duration) * 100 : 0;
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="space-y-4">
@@ -227,7 +174,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
             >
               <div 
                 className="bg-blue-500 h-full rounded-full transition-all duration-100 relative"
-                style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
+                style={{ width: `${progressPercentage}%` }}
               >
                 {/* Progress handle */}
                 <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 hover:opacity-100 transition-opacity duration-200" />
@@ -236,12 +183,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, violations }) => {
             
             {/* Bookmark indicators */}
             {bookmarks.map((bookmark, index) => {
-              const bookmarkPosition = (duration > 0 && isFinite(duration)) ? (bookmark.timeInSeconds / duration) * 100 : 0;
+              const bookmarkPosition = duration > 0 ? (bookmark.timeInSeconds / duration) * 100 : 0;
               return (
                 <div
                   key={index}
                   className="absolute top-0 w-3 h-3 bg-red-500 rounded-full transform -translate-x-1/2 cursor-pointer hover:scale-110 transition-transform duration-200"
-                  style={{ left: `${Math.max(0, Math.min(100, bookmarkPosition))}%` }}
+                  style={{ left: `${bookmarkPosition}%` }}
                   title={`${bookmark.timestamp} - ${bookmark.description}`}
                   onClick={(e) => {
                     e.stopPropagation();
