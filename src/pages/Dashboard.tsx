@@ -11,17 +11,25 @@ import { useAuth } from "@/contexts/AuthContext";
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
 
+  console.log("Dashboard - Current user:", user);
+  console.log("Dashboard - User organization_id:", user?.organization_id);
+
   // Query to fetch organization and its assigned assessments
   const { data: organization } = useQuery({
     queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
+      console.log("Dashboard - Fetching organization for ID:", user?.organization_id);
       const { data, error } = await supabase
         .from('organizations')
         .select('assigned_assessments_code')
         .eq('id', user?.organization_id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Dashboard - Error fetching organization:", error);
+        throw error;
+      }
+      console.log("Dashboard - Organization data:", data);
       return data;
     },
     enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
@@ -31,9 +39,12 @@ const Dashboard: React.FC = () => {
   const { data: assessments, isLoading: isLoadingAssessments } = useQuery({
     queryKey: ['organization-assessments', user?.organization_id, organization?.assigned_assessments_code],
     queryFn: async () => {
+      console.log("Dashboard - Fetching assessments for organization");
       const assignedCodes = organization?.assigned_assessments_code || [];
+      console.log("Dashboard - Assigned codes:", assignedCodes);
       
       if (assignedCodes.length === 0) {
+        console.log("Dashboard - No assigned codes found");
         return [];
       }
 
@@ -43,34 +54,71 @@ const Dashboard: React.FC = () => {
         .in('code', assignedCodes)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Dashboard - Error fetching assessments:", error);
+        throw error;
+      }
+      console.log("Dashboard - Fetched assessments:", data);
       return data;
     },
     enabled: !!user?.id && user?.role === 'admin' && !!organization
   });
 
-  // Query to fetch results for assigned assessments only
-  const { data: results, isLoading: isLoadingResults } = useQuery({
-    queryKey: ['organization-results', user?.organization_id, assessments],
+  // Query to fetch organization students
+  const { data: orgStudents, isLoading: isLoadingStudents } = useQuery({
+    queryKey: ['organization-students', user?.organization_id],
     queryFn: async () => {
-      if (!assessments || assessments.length === 0) return [];
+      console.log("Dashboard - Fetching organization students");
+      const { data, error } = await supabase
+        .from('auth')
+        .select('id')
+        .eq('organization_id', user?.organization_id)
+        .eq('role', 'student');
+      
+      if (error) {
+        console.error("Dashboard - Error fetching students:", error);
+        throw error;
+      }
+      console.log("Dashboard - Organization students:", data);
+      return data;
+    },
+    enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
+  });
+
+  // Query to fetch results for assigned assessments only from organization students
+  const { data: results, isLoading: isLoadingResults } = useQuery({
+    queryKey: ['organization-results', user?.organization_id, assessments, orgStudents],
+    queryFn: async () => {
+      console.log("Dashboard - Fetching results");
+      if (!assessments || assessments.length === 0 || !orgStudents || orgStudents.length === 0) {
+        console.log("Dashboard - No assessments or students available");
+        return [];
+      }
       
       const assessmentIds = assessments.map(a => a.id);
+      const studentIds = orgStudents.map(s => s.id);
+      console.log("Dashboard - Assessment IDs:", assessmentIds);
+      console.log("Dashboard - Student IDs:", studentIds);
       
       const { data, error } = await supabase
         .from('results')
         .select('*')
-        .in('assessment_id', assessmentIds);
+        .in('assessment_id', assessmentIds)
+        .in('user_id', studentIds);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Dashboard - Error fetching results:", error);
+        throw error;
+      }
+      console.log("Dashboard - Fetched results:", data);
       return data;
     },
-    enabled: !!assessments && assessments.length > 0
+    enabled: !!assessments && assessments.length > 0 && !!orgStudents && orgStudents.length > 0
   });
 
   // Calculate statistics based on fetched data
   const stats = React.useMemo(() => {
-    if (!assessments || !results) {
+    if (!assessments || !results || !orgStudents) {
       return {
         totalAssessments: 0,
         totalSubmissions: 0,
@@ -79,7 +127,11 @@ const Dashboard: React.FC = () => {
       };
     }
 
-    const totalAssessments = assessments.length;
+    // Only count assessments that have been attempted by organization students
+    const attemptedAssessmentIds = new Set(results.map(r => r.assessment_id));
+    const attemptedAssessments = assessments.filter(a => attemptedAssessmentIds.has(a.id));
+    
+    const totalAssessments = attemptedAssessments.length;
     const totalSubmissions = results.length;
     
     let totalScorePercentage = 0;
@@ -100,49 +152,51 @@ const Dashboard: React.FC = () => {
       ? parseFloat(((passCount / totalSubmissions) * 100).toFixed(1))
       : 0;
 
+    console.log("Dashboard - Stats:", { totalAssessments, totalSubmissions, averageScore, passRate });
+
     return {
       totalAssessments,
       totalSubmissions,
       averageScore,
       passRate,
     };
-  }, [assessments, results]);
+  }, [assessments, results, orgStudents]);
 
-  // Query to fetch assessment analytics for assigned assessments only
+  // Query to fetch assessment analytics for attempted assessments only
   const { data: recentAssessments, isLoading: isLoadingRecent } = useQuery({
-    queryKey: ['organization-all-assessments', user?.organization_id, assessments],
+    queryKey: ['organization-all-assessments', user?.organization_id, assessments, results],
     queryFn: async () => {
-      if (!assessments || assessments.length === 0) {
+      if (!assessments || assessments.length === 0 || !results || results.length === 0) {
+        console.log("Dashboard - No assessments or results for analytics");
         return [];
       }
       
-      // For each assigned assessment, get submission count and average score
-      const assessmentData = await Promise.all(
-        assessments.map(async (assessment) => {
-          const { data: assessmentResults, error: resultsError } = await supabase
-            .from('results')
-            .select('percentage')
-            .eq('assessment_id', assessment.id);
-          
-          if (resultsError) throw resultsError;
-          
-          const submissions = assessmentResults?.length || 0;
-          const totalScore = assessmentResults?.reduce((sum, result) => sum + result.percentage, 0) || 0;
-          const avgScore = submissions > 0 ? Math.round(totalScore / submissions) : 0;
-          
-          return {
-            id: assessment.id,
-            title: assessment.name,
-            code: assessment.code,
-            submissions,
-            avgScore
-          };
-        })
-      );
+      // Only include assessments that have been attempted
+      const attemptedAssessmentIds = new Set(results.map(r => r.assessment_id));
+      const attemptedAssessments = assessments.filter(a => attemptedAssessmentIds.has(a.id));
       
+      console.log("Dashboard - Attempted assessments:", attemptedAssessments);
+      
+      // For each attempted assessment, calculate submission count and average score
+      const assessmentData = attemptedAssessments.map(assessment => {
+        const assessmentResults = results.filter(r => r.assessment_id === assessment.id);
+        const submissions = assessmentResults.length;
+        const totalScore = assessmentResults.reduce((sum, result) => sum + result.percentage, 0);
+        const avgScore = submissions > 0 ? Math.round(totalScore / submissions) : 0;
+        
+        return {
+          id: assessment.id,
+          title: assessment.name,
+          code: assessment.code,
+          submissions,
+          avgScore
+        };
+      });
+      
+      console.log("Dashboard - Assessment analytics data:", assessmentData);
       return assessmentData;
     },
-    enabled: !!assessments && assessments.length > 0
+    enabled: !!assessments && assessments.length > 0 && !!results && results.length > 0
   });
 
   // Generate chart data based on recent assessments
@@ -156,7 +210,7 @@ const Dashboard: React.FC = () => {
     }));
   }, [recentAssessments]);
 
-  const isLoading = isLoadingAssessments || isLoadingResults || isLoadingRecent;
+  const isLoading = isLoadingAssessments || isLoadingResults || isLoadingRecent || isLoadingStudents;
 
   if (isLoading) {
     return (
@@ -171,9 +225,9 @@ const Dashboard: React.FC = () => {
 
   const statCards = [
     {
-      title: "Total Assessments",
+      title: "Attempted Assessments",
       value: stats.totalAssessments,
-      description: "Assigned assessment templates",
+      description: "Assessments with student submissions",
       icon: FileText,
       gradient: "from-blue-500 to-blue-600",
       change: "+12%"
@@ -181,7 +235,7 @@ const Dashboard: React.FC = () => {
     {
       title: "Total Submissions",
       value: stats.totalSubmissions,
-      description: "Across assigned assessments",
+      description: "From organization students",
       icon: Users,
       gradient: "from-green-500 to-green-600",
       change: "+18%"
@@ -248,7 +302,7 @@ const Dashboard: React.FC = () => {
             <div>
               <CardTitle className="text-xl font-semibold">Assessment Analytics</CardTitle>
               <CardDescription className="mt-1">
-                Performance metrics across assigned assessments
+                Performance metrics for attempted assessments
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -317,7 +371,7 @@ const Dashboard: React.FC = () => {
                 <BarChart size={48} className="text-muted-foreground/50" />
                 <div className="text-center">
                   <p className="text-muted-foreground font-medium">No assessment data available</p>
-                  <p className="text-sm text-muted-foreground/70">Assigned assessments will appear here</p>
+                  <p className="text-sm text-muted-foreground/70">Data will appear when students attempt assessments</p>
                 </div>
               </div>
             )}
@@ -330,9 +384,9 @@ const Dashboard: React.FC = () => {
         <CardHeader className="pb-6">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-semibold">Assigned Assessments</CardTitle>
+              <CardTitle className="text-xl font-semibold">Attempted Assessments</CardTitle>
               <CardDescription className="mt-1">
-                Performance data for your organization's assessments
+                Performance data for assessments with student submissions
               </CardDescription>
             </div>
             <Clock size={20} className="text-muted-foreground" />
@@ -387,8 +441,8 @@ const Dashboard: React.FC = () => {
             <div className="text-center py-12 space-y-4">
               <FileText size={48} className="mx-auto text-muted-foreground/50" />
               <div>
-                <p className="text-muted-foreground font-medium">No assigned assessments available</p>
-                <p className="text-sm text-muted-foreground/70">Contact your administrator to assign assessments</p>
+                <p className="text-muted-foreground font-medium">No attempted assessments available</p>
+                <p className="text-sm text-muted-foreground/70">Data will appear when students from your organization attempt assessments</p>
               </div>
             </div>
           )}
