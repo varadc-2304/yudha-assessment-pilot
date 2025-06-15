@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -30,7 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AssessmentResult, FaceViolation, ProctoringData } from "@/types/assessment";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bot, Eye, Shield, AlertTriangle, CheckCircle, Video, Clock, User2, Calendar } from "lucide-react";
+import { Bot, Eye, AlertTriangle, CheckCircle, Video, User, Clock } from "lucide-react";
 import AskAIDialog from "@/components/results/AskAIDialog";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import {
@@ -598,93 +599,36 @@ const Results: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Enhanced Proctoring Data Dialog */}
+      {/* Minimalist Proctoring Dialog */}
       <Dialog open={proctoringDialogOpen} onOpenChange={setProctoringDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden p-0 bg-gradient-to-br from-slate-50 to-white">
-          {/* Enhanced Header */}
-          <DialogHeader className="px-8 py-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-700/90"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-white/20 rounded-full backdrop-blur-sm">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <DialogTitle className="text-2xl font-bold text-white mb-1">
-                    AI Proctoring Analysis
-                  </DialogTitle>
-                  <p className="text-blue-100 text-sm font-medium">
-                    Comprehensive monitoring and violation detection
-                  </p>
-                </div>
+        <DialogContent className="max-w-6xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Proctoring Report
+            </DialogTitle>
+            {studentInfo && (
+              <div className="text-sm text-gray-600 mt-2">
+                {studentInfo.userName} • {studentInfo.assessment?.name} • {formatDate(studentInfo.completed_at)}
               </div>
-
-              {/* Student Info Card */}
-              {studentInfo && (
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/20 rounded-lg">
-                        <User2 className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-blue-100 uppercase tracking-wide">Student</p>
-                        <p className="text-white font-semibold">{studentInfo.userName}</p>
-                        <p className="text-blue-100 text-sm">{studentInfo.userPrn}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/20 rounded-lg">
-                        <Calendar className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-blue-100 uppercase tracking-wide">Assessment</p>
-                        <p className="text-white font-semibold">{studentInfo.assessment?.name}</p>
-                        <p className="text-blue-100 text-sm">{studentInfo.assessment?.code}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-white/20 rounded-lg">
-                        <Clock className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-blue-100 uppercase tracking-wide">Completed</p>
-                        <p className="text-white font-semibold">{formatDate(studentInfo.completed_at)}</p>
-                        <p className="text-blue-100 text-sm">Score: {studentInfo.percentage}%</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto">
+          <ScrollArea className="max-h-[75vh] px-6 pb-6">
             {isProctoringLoading ? (
-              <div className="flex flex-col justify-center items-center h-96 bg-gray-50">
-                <div className="p-4 bg-white rounded-full shadow-lg mb-4">
-                  <LoadingSpinner size="lg" />
-                </div>
-                <p className="text-gray-600 font-medium">Analyzing proctoring data...</p>
-                <p className="text-gray-500 text-sm">Please wait while we load the monitoring results</p>
+              <div className="flex justify-center items-center h-64">
+                <LoadingSpinner size="lg" />
               </div>
             ) : (
-              <div className="p-8 space-y-8">
+              <div className="space-y-6">
                 {/* Recording Section */}
                 {proctoringData?.recording_url ? (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                    <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <Video className="h-6 w-6 text-white" />
-                        <h3 className="text-xl font-bold text-white">Session Recording</h3>
-                        <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
-                          Available
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="p-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                      <Video className="h-5 w-5" />
+                      Recording
+                    </h3>
+                    <div className="bg-gray-50 rounded-lg p-4">
                       <VideoPlayer 
                         videoUrl={proctoringData.recording_url}
                         violations={proctoringData.face_violations}
@@ -692,130 +636,52 @@ const Results: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
-                    <div className="text-center">
-                      <div className="p-4 bg-gray-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                        <Video className="h-10 w-10 text-gray-400" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Recording Available</h3>
-                      <p className="text-gray-600">Session recording was not captured for this assessment.</p>
-                    </div>
+                  <div className="text-center py-8 text-gray-500">
+                    <Video className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No recording available</p>
                   </div>
                 )}
 
                 {/* Violations Section */}
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-                  <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <AlertTriangle className="h-6 w-6 text-white" />
-                        <h3 className="text-xl font-bold text-white">Violation Analysis</h3>
-                      </div>
-                      <Badge className="bg-white/20 text-white border-white/30">
-                        {proctoringData?.face_violations?.length || 0} detected
-                      </Badge>
-                    </div>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Violations ({proctoringData?.face_violations?.length || 0})
+                  </h3>
                   
-                  <div className="p-6">
-                    {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                          <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-red-100 rounded-lg">
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-red-600 font-medium">Total Violations</p>
-                                <p className="text-2xl font-bold text-red-700">{proctoringData.face_violations.length}</p>
-                              </div>
+                  {proctoringData?.face_violations && proctoringData.face_violations.length > 0 ? (
+                    <div className="space-y-2">
+                      {proctoringData.face_violations.map((violation, index) => {
+                        const timestampMatch = violation.match(/\[(\d{2}):(\d{2})\]/);
+                        return (
+                          <div key={index} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+                            <div className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-mono mt-0.5">
+                              #{index + 1}
                             </div>
-                          </div>
-                          
-                          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-amber-100 rounded-lg">
-                                <Clock className="h-5 w-5 text-amber-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-amber-600 font-medium">Risk Level</p>
-                                <p className="text-lg font-bold text-amber-700">
-                                  {proctoringData.face_violations.length > 5 ? 'High' : 
-                                   proctoringData.face_violations.length > 2 ? 'Medium' : 'Low'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <Shield className="h-5 w-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm text-blue-600 font-medium">Status</p>
-                                <p className="text-lg font-bold text-blue-700">
-                                  {proctoringData.face_violations.length > 0 ? 'Flagged' : 'Clean'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4">Detailed Violation Log</h4>
-                          {proctoringData.face_violations.map((violation, index) => {
-                            const timestampMatch = violation.match(/\[(\d{2}):(\d{2})\]/);
-                            return (
-                              <div 
-                                key={index} 
-                                className="flex items-start gap-4 p-5 bg-gradient-to-r from-red-50 to-red-25 border border-red-200 rounded-xl hover:shadow-md transition-all duration-200"
-                              >
-                                <div className="flex-shrink-0 mt-1">
-                                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                    <span className="text-sm font-bold text-red-600">#{index + 1}</span>
-                                  </div>
+                            <div className="flex-1 text-sm">
+                              {timestampMatch && (
+                                <div className="text-xs text-red-600 font-mono mb-1">
+                                  {timestampMatch[1]}:{timestampMatch[2]}
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    {timestampMatch && (
-                                      <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 font-mono">
-                                        {timestampMatch[1]}:{timestampMatch[2]}
-                                      </Badge>
-                                    )}
-                                    <Badge variant="outline" className="text-red-600 border-red-300">
-                                      Violation Detected
-                                    </Badge>
-                                  </div>
-                                  <p className="text-gray-800 font-medium leading-relaxed">
-                                    {violation.replace(/\[\d{2}:\d{2}\]\s*/, '')}
-                                  </p>
-                                </div>
+                              )}
+                              <div className="text-gray-900">
+                                {violation.replace(/\[\d{2}:\d{2}\]\s*/, '')}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-12">
-                        <div className="p-4 bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                          <CheckCircle className="h-10 w-10 text-green-600" />
-                        </div>
-                        <h4 className="text-xl font-semibold text-gray-900 mb-2">Clean Session</h4>
-                        <p className="text-gray-600 max-w-md mx-auto">
-                          No violations were detected during this assessment session. The student maintained proper conduct throughout.
-                        </p>
-                        <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
-                          <p className="text-green-800 font-medium">✓ Assessment completed with full integrity</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No violations detected</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
-          </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
