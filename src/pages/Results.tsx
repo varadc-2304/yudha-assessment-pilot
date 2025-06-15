@@ -42,17 +42,25 @@ const Results: React.FC = () => {
   const [selectedUserAssessment, setSelectedUserAssessment] = useState<{userId: string, assessmentId: string} | null>(null);
   const { user } = useAuth();
 
+  console.log("Current user:", user);
+  console.log("User organization_id:", user?.organization_id);
+
   // First, fetch organization and its assigned assessments
   const { data: organization, isLoading: isLoadingOrg } = useQuery({
     queryKey: ['organization', user?.organization_id],
     queryFn: async () => {
+      console.log("Fetching organization for ID:", user?.organization_id);
       const { data, error } = await supabase
         .from('organizations')
         .select('assigned_assessments_code')
         .eq('id', user?.organization_id)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching organization:", error);
+        throw error;
+      }
+      console.log("Organization data:", data);
       return data;
     },
     enabled: !!user?.id && user?.role === 'admin' && !!user?.organization_id
@@ -62,9 +70,12 @@ const Results: React.FC = () => {
   const { data: orgAssessments, isLoading: isLoadingAssessments } = useQuery({
     queryKey: ['org-assessments', user?.organization_id, organization?.assigned_assessments_code],
     queryFn: async () => {
+      console.log("Fetching assessments for organization");
       const assignedCodes = organization?.assigned_assessments_code || [];
+      console.log("Assigned codes:", assignedCodes);
       
       if (assignedCodes.length === 0) {
+        console.log("No assigned codes found");
         return [];
       }
 
@@ -73,7 +84,11 @@ const Results: React.FC = () => {
         .select('id, name, code')
         .in('code', assignedCodes);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching assessments:", error);
+        throw error;
+      }
+      console.log("Fetched assessments:", data);
       return data;
     },
     enabled: !!user?.id && user?.role === 'admin' && !!organization
@@ -83,7 +98,11 @@ const Results: React.FC = () => {
   const { data: results, isLoading, error } = useQuery({
     queryKey: ['results', assessmentId, user?.organization_id, orgAssessments],
     queryFn: async () => {
+      console.log("Fetching results data");
+      console.log("orgAssessments:", orgAssessments);
+      
       if (!orgAssessments || orgAssessments.length === 0) {
+        console.log("No org assessments available");
         return [];
       }
 
@@ -91,33 +110,46 @@ const Results: React.FC = () => {
       let assessmentIds: string[] = [];
       
       if (assessmentId) {
+        console.log("Checking specific assessment ID:", assessmentId);
         if (orgAssessments.some(a => a.id === assessmentId)) {
           assessmentIds = [assessmentId];
+          console.log("Assessment found in assigned list");
         } else {
+          console.log("Assessment not in assigned list");
           return []; // Assessment not in assigned list
         }
       } else {
         assessmentIds = orgAssessments.map(a => a.id);
+        console.log("Using all assessment IDs:", assessmentIds);
       }
       
       if (assessmentIds.length === 0) {
+        console.log("No assessment IDs to query");
         return [];
       }
       
       // Get organization students only
+      console.log("Fetching organization students");
       const { data: orgStudents, error: studentsError } = await supabase
         .from('auth')
         .select('id')
         .eq('organization_id', user?.organization_id)
         .eq('role', 'student');
       
-      if (studentsError) throw studentsError;
+      if (studentsError) {
+        console.error("Error fetching students:", studentsError);
+        throw studentsError;
+      }
+      
+      console.log("Organization students:", orgStudents);
       
       if (!orgStudents || orgStudents.length === 0) {
+        console.log("No students found in organization");
         return [];
       }
       
       const studentIds = orgStudents.map(s => s.id);
+      console.log("Student IDs:", studentIds);
       
       let query = supabase.from('results').select(`
         id,
@@ -137,7 +169,12 @@ const Results: React.FC = () => {
       
       const { data, error } = await query.order('completed_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching results:", error);
+        throw error;
+      }
+      
+      console.log("Fetched results:", data);
       
       return data.map(result => ({
         id: result.id,
@@ -295,6 +332,7 @@ const Results: React.FC = () => {
   };
 
   if (error) {
+    console.error("Results page error:", error);
     return (
       <div className="p-8 text-center">
         <p className="text-red-500">Error loading results: {(error as any).message}</p>
@@ -309,6 +347,8 @@ const Results: React.FC = () => {
       </div>
     );
   }
+
+  console.log("Final filtered results:", filteredResults);
 
   return (
     <div>
